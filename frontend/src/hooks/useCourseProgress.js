@@ -33,10 +33,20 @@ export const useCourseProgress = (courseId, userId, courseChapters) => {
         setError(null);
         try {
             const res = await getLearningProgress(courseId);
-            setEnrollment(res);
-            setCompletedLectures(res.completedLectures || []);
-            setProgressPercentage(res.progress || 0);
-            setIsCourseCompleted(res.isCompleted || false);
+            // The backend's getLearningProgress now returns { isEnrolled: boolean, enrollment: {...} }
+            // So we need to access res.enrollment if it exists
+            if (res.isEnrolled && res.enrollment) {
+                setEnrollment(res.enrollment);
+                setCompletedLectures(res.enrollment.completedLectures || []);
+                setProgressPercentage(res.enrollment.progress || 0);
+                setIsCourseCompleted(res.enrollment.isCompleted || false);
+            } else {
+                // Not enrolled, so clear enrollment state
+                setEnrollment(null);
+                setCompletedLectures([]);
+                setProgressPercentage(0);
+                setIsCourseCompleted(false);
+            }
         } catch (err) {
             console.error("useCourseProgress: fetchProgress: Error fetching learning progress:", err);
             setError(err);
@@ -69,11 +79,13 @@ export const useCourseProgress = (courseId, userId, courseChapters) => {
             console.warn("useCourseProgress: enroll: Failed - course ID missing.");
             return false;
         }
-        if (enrollment) {
+        // Only check for existing enrollment if enrollment data has been loaded and it's not null
+        if (enrollment !== null && enrollment.hasOwnProperty('_id')) { // Check if enrollment object is populated
             toast.info("You are already enrolled in this course.");
             console.info("useCourseProgress: enroll: Already enrolled, skipping.");
             return false;
         }
+
 
         setIsLoadingProgress(true);
         setError(null);
@@ -98,11 +110,18 @@ export const useCourseProgress = (courseId, userId, courseChapters) => {
 
     // Function to mark a lecture as complete
     const markLectureAsComplete = useCallback(async (lectureId, totalCourseChapters) => {
-        if (!isAuthenticated || !user?._id || !enrollment) {
-            toast.error("You must be logged in and enrolled to mark lectures complete.");
-            console.warn("useCourseProgress: markLectureAsComplete: Failed - not authenticated or enrolled.");
+        if (!isAuthenticated || !user?._id) {
+            toast.error("You must be logged in to mark lectures complete.");
+            console.warn("useCourseProgress: markLectureAsComplete: Failed - user not authenticated or user ID missing.");
             return false;
         }
+        // Crucial: Ensure enrollment object is available and has an _id before proceeding
+        if (!enrollment || !enrollment._id) {
+            toast.error("Enrollment not found. Please enroll in the course first.");
+            console.warn("useCourseProgress: markLectureAsComplete: Failed - enrollment object is null or missing _id.");
+            return false;
+        }
+
         if (completedLectures.includes(lectureId)) {
             toast.info("This lecture is already marked complete.");
             console.info("useCourseProgress: markLectureAsComplete: Already complete, skipping.");
@@ -112,6 +131,8 @@ export const useCourseProgress = (courseId, userId, courseChapters) => {
         setIsLoadingProgress(true);
         setError(null);
         try {
+            // Log the IDs being sent to the backend for verification
+            console.log('Attempting to mark lecture complete with Enrollment ID:', enrollment._id, 'and Lecture ID:', lectureId);
             const updatedEnrollment = await markLectureComplete(enrollment._id, lectureId);
 
             let totalLectures = 0;
@@ -127,13 +148,13 @@ export const useCourseProgress = (courseId, userId, courseChapters) => {
             setCompletedLectures(updatedEnrollment.completedLectures || []);
             setProgressPercentage(newProgress);
             setIsCourseCompleted(newIsCompleted);
-
-            toast.success("Lecture marked complete!");
             return true;
         } catch (err) {
             console.error("useCourseProgress: markLectureAsComplete: Error:", err);
-            setError(err);
-            toast.error(err.response?.data?.message || "Failed to mark lecture complete.");
+            // Provide a more informative error message from backend if available
+            const backendMessage = err.response?.data?.message;
+            toast.error(backendMessage || "Failed to mark lecture complete. Please try again.");
+            setError(err); // Keep the detailed error object in state for further debugging
             return false;
         } finally {
             setIsLoadingProgress(false);
