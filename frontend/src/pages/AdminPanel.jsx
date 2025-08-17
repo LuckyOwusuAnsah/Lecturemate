@@ -11,8 +11,6 @@ import {
   BookOpen,
   Shield,
   Search,
-  Eye,
-  Ban, // For disabling/enabling users
   CheckCircle,
   XCircle,
   Crown,
@@ -20,7 +18,6 @@ import {
   AlertCircle, // Added for error display
   Trash2, // Added for delete buttons
   GraduationCap, // Icon for students/educators
-  UserPlus // Icon for pending educators
 } from "lucide-react";
 
 // Shadcn UI components for dropdowns
@@ -169,8 +166,6 @@ export default function AdminPanel() {
                 </div>
                 {stats.pendingEducators > 0 && (
                   <div className="flex items-center gap-2 mt-2 text-yellow-100 text-sm">
-                    <UserPlus className="w-4 h-4" />
-                    <span>Pending Educators: {stats.pendingEducators}</span>
                   </div>
                 )}
               </div>

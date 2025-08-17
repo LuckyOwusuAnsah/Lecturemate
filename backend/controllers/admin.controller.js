@@ -20,7 +20,7 @@ export const updateAdminProfile = asyncHandler(async (req, res) => {
 
 // GET /api/admin/dashboard-stats
 export const getDashboardStats = asyncHandler(async (req, res) => {
-  const totalUsers = await User.countDocuments();
+const totalUsers = await User.countDocuments({ role: { $in: ["student", "educator"] } });
   const students = await User.countDocuments({ role: "student" });
   const educators = await User.countDocuments({ role: "educator" });
   const pendingEducators = await User.countDocuments({ role: "educator", status: "pending" });
