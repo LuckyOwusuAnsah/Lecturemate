@@ -32,32 +32,17 @@ export default function CourseCard({ course, featured = false }) {
         e.preventDefault();
         e.stopPropagation();
 
-        // Check if user is authenticated and is a student before allowing enrollment/payment flow
-        if (isAuthenticated && user?.role === 'student') {
-            if (course.price > 0) {
-                window.location.href = createPageUrl(`PaymentPage?courseId=${course.id}`);
-            } else {
-                window.location.href = createPageUrl(`CourseDetail?id=${course.id}`);
-            }
-        } else if (!isAuthenticated) {
-            // If not authenticated, still allow "enroll free" to redirect to course detail
-            // or prompt to login/register for paid courses
-            if (course.price === 0) {
-                 window.location.href = createPageUrl(`CourseDetail?id=${course.id}`);
-            } else {
-                // For paid courses when not logged in, prompt to login or go to payment
-                // For this example, we'll redirect to login. You might want a specific modal here.
-                window.location.href = createPageUrl("Login"); // Or a specific page for course purchase
-            }
-        } else {
-            // If authenticated but not a student (e.g., educator/admin), do nothing or show a message
-            // The buttons will be hidden anyway by the conditional rendering below.
-            console.log("Educators/Admins cannot enroll in courses via this card.");
-        }
+        // For both paid and free courses, just navigate to the CourseDetail page.
+        // The CourseDetail page will handle the actual enrollment logic.
+        window.location.href = createPageUrl(`CourseDetail?id=${course._id}`);
     };
 
     // Determine if the buttons should be visible (only for students or non-logged-in users)
+    // Removed specific role check here as CourseDetail handles the enrollment state.
+    // The CourseCard should generally allow navigation if the course is public.
+    // We can keep the original `showActionButtons` if you want to explicitly hide for educators/admins on the card itself.
     const showActionButtons = !isAuthenticated || user?.role === 'student';
+
 
     return (
         <Card className={`group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 overflow-hidden ${
@@ -162,7 +147,7 @@ export default function CourseCard({ course, featured = false }) {
                                 size="sm"
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    window.location.href = createPageUrl(`CourseDetail?id=${course._id}`); // Use _id for consistency
+                                    window.location.href = createPageUrl(`CourseDetail?id=${course._id}`);
                                 }}
                                 className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors"
                             >
@@ -172,7 +157,7 @@ export default function CourseCard({ course, featured = false }) {
 
                             <Button
                                 size="sm"
-                                onClick={handleEnrollClick}
+                                onClick={handleEnrollClick} // Now consistently navigates to CourseDetail
                                 className="bg-blue-600 hover:bg-blue-700"
                             >
                                 {course.price > 0 ? (

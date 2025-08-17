@@ -138,16 +138,73 @@ export const createCourse = asyncHandler(async (req, res) => {
 // @desc    Update a course
 // @route   PUT /api/educators/courses/:courseId
 export const updateCourse = asyncHandler(async (req, res) => {
-  const course = await Course.findOneAndUpdate(
-    { _id: req.params.courseId, educator: req.user._id },
-    req.body,
-    { new: true, runValidators: true }
-  );
-  if (!course) {
-    res.status(404);
-    throw new Error("Course not found or not authorized");
-  }
-  res.json(course);
+    const { courseId } = req.params;
+
+    // IMPORTANT: When using FormData with Multer, req.body will contain the text fields.
+    // Ensure Multer is correctly configured for this route in your router.
+    // For example: router.put('/:courseId', protect, upload.single('thumbnail'), updateCourse);
+
+    // Destructure properties safely, providing defaults for robustness
+    const {
+        title = '', // Provide empty string default
+        description = '',
+        category = '',
+        subject = '',
+        level = 'Beginner', // Default to Beginner
+        price, // Price can be 0, so check for undefined
+        chapters, // These will be JSON strings
+        tags,
+        contentLinks,
+        duration,
+        status = 'Draft', // Default status for update
+    } = req.body;
+
+    // Find the course by ID and ensure it belongs to the authenticated educator
+    let course = await Course.findOne({ _id: courseId, educator: req.user._id });
+
+    if (!course) {
+        res.status(404);
+        throw new Error("Course not found or not authorized to update");
+    }
+
+    // Handle thumbnail update if a new file is provided via req.file (from Multer)
+    if (req.file) {
+        try {
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'course_thumbnails',
+                resource_type: 'image',
+            });
+            course.thumbnail = result.secure_url; // Update thumbnail URL
+        } catch (uploadError) {
+            console.error("Cloudinary thumbnail update error:", uploadError);
+            res.status(500);
+            throw new Error("Failed to upload new thumbnail.");
+        }
+    } 
+    // If req.file is null/undefined, the existing course.thumbnail will persist.
+    // If you need to allow clearing the thumbnail, you'd send a specific flag
+    // from frontend or a null/empty string value for 'thumbnail' that isn't a file.
+
+    // Update course fields with values from req.body
+    course.title = title;
+    course.description = description;
+    course.category = category;
+    course.subject = subject;
+    course.level = level;
+    // Only update price if it's explicitly provided (can be 0)
+    course.price = price !== undefined ? parseFloat(price) : course.price; // Parse price from string to number
+    course.duration = duration !== undefined ? parseFloat(duration) : course.duration; // Parse duration
+    course.status = status;
+
+    // Parse and update array fields (chapters, tags, contentLinks) from JSON strings
+    course.chapters = chapters ? JSON.parse(chapters) : course.chapters;
+    course.tags = tags ? JSON.parse(tags) : course.tags;
+    course.contentLinks = contentLinks ? JSON.parse(contentLinks) : course.contentLinks;
+
+    // Save the updated course
+    const updatedCourse = await course.save();
+
+    res.json(updatedCourse);
 });
 
 // @desc    Get courses created by educator

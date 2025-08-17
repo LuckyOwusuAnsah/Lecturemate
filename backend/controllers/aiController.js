@@ -65,20 +65,60 @@ export const getWellnessInsights = asyncHandler(async (req, res) => {
 });
 
 
+// Helper function to sanitize user messages
+const sanitizeUserMessage = (message) => {
+  let sanitizedMessage = message.toLowerCase();
+
+  // Replace "kill boredom" with "overcome boredom"
+  sanitizedMessage = sanitizedMessage.replace(/\bkill boredom\b/g, 'overcome boredom');
+  // Add more sanitization rules as needed
+  // sanitizedMessage = sanitizedMessage.replace(/\bstrong_word\b/g, 'safer_word');
+
+  return sanitizedMessage;
+};
+
+
 // @desc    Get AI counselor response
 // @route   POST /api/ai/counselor
 // @access  Private (should be)
 export const getAICounselorResponse = asyncHandler(async (req, res) => {
-  const { chatHistory } = req.body; // chatHistory comes as [{ role: 'assistant', content: '...' }, { role: 'user', content: '...' }]
- const userName = req.user ? req.user.name : 'the student on this app'; 
- const SYSTEM_INSTRUCTION_CONTENT = `You are a supportive, empathetic, and non-judgmental AI wellness counselor, specifically tailored to assist students.
+  const { chatHistory } = req.body;
+  const userName = req.user ? req.user.name : 'the student on this app';
+  const userId = req.user._id; // Get the user ID from the authenticated request
+
+  // --- NEW: Fetch recent mood entries for the user ---
+  const userMoodEntries = await MoodEntry.find({ user: userId })
+    .sort({ date: -1 }) // Sort by most recent first
+    .limit(7); // Get the last 7 mood entries for context (adjust as needed)
+
+  // Format mood data for the AI prompt
+  let moodContext = "No recent mood data available.";
+  if (userMoodEntries && userMoodEntries.length > 0) {
+    const latestMood = userMoodEntries[0];
+    const weeklyAverageMoodScore = calculateWeeklyAverageMoodScore(userMoodEntries);
+    
+    moodContext = `The user's latest recorded mood is "${latestMood.mood}" on ${new Date(latestMood.date).toLocaleDateString()}. `;
+    if (latestMood.notes) {
+      moodContext += `Their notes for this mood were: "${latestMood.notes}". `;
+    }
+    moodContext += `Their average mood over the last week is approximately ${weeklyAverageMoodScore}. `;
+    moodContext += `Recent mood history: ${userMoodEntries.map(entry => `${entry.mood} (${new Date(entry.date).toLocaleDateString()})`).join(', ')}.`;
+  }
+  // --- END NEW ---
+
+  // Define the core system instruction content, now including personalization and mood data
+  const SYSTEM_INSTRUCTION_CONTENT = `You are a supportive, empathetic, and non-judgmental AI wellness counselor, specifically tailored to assist students.
   Treat the user you are conversing with as a student seeking support for their mental wellness.
   Your purpose is to listen, offer gentle guidance, encourage self-reflection, and provide general coping strategies.
   You should never diagnose, prescribe, or give medical advice.
   Keep responses concise and focused on well-being.
   Acknowledge the user's last message before responding.
   Always address the user by their name, which is "${userName}", at appropriate points in the conversation. If the name is unavailable (i.e., "${userName}" is "the student on this app"), use generic supportive language.
-  You should always use positive and constructive language. Avoid any phrasing that could be interpreted as harmful or violent. Focus on empowering the user to manage their feelings and situations.`;
+  When providing lists, please use simple bullet points (e.g., "- Item one") or hyphenated lists, or ensure that numbered lists are formatted strictly as "1. Item one" (without bolding numbers or other complex Markdown) to ensure readability in a plain text display.
+  You should always use positive and constructive language. Avoid any phrasing that could be interpreted as harmful or violent. Focus on empowering the user to manage their feelings and situations.
+
+  Here is the user's recent mood data for additional context: ${moodContext}
+  Use this information to better understand the user's emotional state and tailor your responses accordingly. For example, if they've logged "very sad" recently, respond with extra empathy and focus on mood-lifting suggestions, or if they're "very happy", acknowledge it and maintain a positive tone.`;
 
 
   // Start building messages for the AI. The system instruction always comes first.
@@ -101,11 +141,17 @@ export const getAICounselorResponse = asyncHandler(async (req, res) => {
       continue;
     }
 
+    // Sanitize user messages before adding to messagesForAI
+    let processedContent = content;
+    if (msg.role === 'user') {
+      processedContent = sanitizeUserMessage(content);
+    }
+
     // Map 'assistant' role from frontend to 'assistant' for OpenAI-compatible API
     // 'user' role remains 'user'
     const aiApiRole = msg.role === 'assistant' ? 'assistant' : 'user';
     
-    messagesForAI.push({ role: aiApiRole, content: content });
+    messagesForAI.push({ role: aiApiRole, content: processedContent });
   }
 
 
@@ -117,13 +163,17 @@ export const getAICounselorResponse = asyncHandler(async (req, res) => {
       return res.status(400).json({ success: false, error: 'No valid message to process.' });
   }
 
+  // Debug log to see final messages array before sending
+  console.log('Final messages sent to GitHub AI API (with Mood Context):', JSON.stringify(messagesForAI));
+
   // Call the AI service to get the completion
   const aiResponse = await getChatCompletion(messagesForAI, 0.8);
 
   res.json({ success: true, response: aiResponse });
 });
 
-// ... (rest of your aiController.js file with other functions)
+// ... (rest of your aiController.js file with other functions like generateCourseOutline, etc.)
+
 export const generateCourseOutline = asyncHandler(async (req, res) => {
     const { topic, difficulty, duration, audience, styleTone, additionalContext } = req.body;
 

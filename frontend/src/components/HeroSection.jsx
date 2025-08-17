@@ -36,23 +36,34 @@ export default function HeroSection({ user, onAuthAction }) {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              {user ? (
-                <Link to={createPageUrl("Dashboard")}>
-                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-xl">
-                    <BookOpen className="w-5 h-5 mr-2" />
-                    Go to Dashboard
-                  </Button>
-                </Link>
-              ) : (
-                <Button 
-                  size="lg" 
-                  onClick={onAuthAction}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-xl"
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Start Learning
-                </Button>
-              )}
+             {
+  user ? (
+    user.role === 'student' ? (
+      <Link to={createPageUrl("StudentDashboard")}>
+        <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-xl">
+          <BookOpen className="w-5 h-5 mr-2" />
+          Go to Dashboard
+        </Button>
+      </Link>
+    ) : user.role === 'educator' ? (
+      <Link to={createPageUrl("EducatorDashboard")}>
+        <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-xl">
+          <BookOpen className="w-5 h-5 mr-2" />
+          Go to Dashboard
+        </Button>
+      </Link>
+    ) : null // Or handle other user roles here if needed
+  ) : (
+    <Button 
+      size="lg" 
+      onClick={onAuthAction}
+      className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg rounded-xl"
+    >
+      <Play className="w-5 h-5 mr-2" />
+      Start Learning
+    </Button>
+  )
+}
               
               <Button 
                 size="lg" 

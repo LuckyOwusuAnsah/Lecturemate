@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { FcGoogle } from "react-icons/fc";
 import { AtSign, Lock } from "lucide-react";
 
 export default function Login() {
@@ -91,15 +90,6 @@ export default function Login() {
 
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4 pb-8">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full flex items-center gap-2 border-gray-300 dark:border-gray-700"
-            >
-              <FcGoogle size={20} />
-              Continue with Google
-            </Button>
-
             <div className="flex items-center gap-4">
               <Separator className="flex-1" />
               <span className="text-sm text-gray-500 dark:text-gray-400">or</span>

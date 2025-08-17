@@ -20,7 +20,7 @@ export const createReview = asyncHandler(async (req, res) => {
   const { courseId } = req.params;
 
   // Check if user is logged in and is a student
-  if (!req.user || req.user.role !== 'student') {
+  if (!req.user || req.user.role !== 'student' || req.user.role !== 'educator') {
     res.status(401);
     throw new Error('Not authorized as a student to review.');
   }

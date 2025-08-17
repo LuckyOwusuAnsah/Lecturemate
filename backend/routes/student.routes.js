@@ -14,7 +14,7 @@ const studentRouter = express.Router();
 
 // All routes are protected and require student role
 studentRouter.use(protect);
-studentRouter.use(authorizeRoles(["student"]));
+studentRouter.use(authorizeRoles(["student", "educator"]));
 
 // @route   GET /api/students/profile
 studentRouter.get("/profile", getStudentProfile);

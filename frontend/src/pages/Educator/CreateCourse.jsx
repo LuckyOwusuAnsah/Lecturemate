@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom"; // Import useLocation
+import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,83 +15,120 @@ import {
     Image,
     Play,
     Save,
-    Eye
+    Eye,
+    Loader2 // Added Loader2 for loading indicator
 } from "lucide-react";
 
 // Toast notifications
 import { toast } from 'react-toastify';
 
 // Custom Hooks and Context
-import { useCreateCourse } from '@/hooks/useCreateCourse';
+import { useCreateCourse } from '@/hooks/useCreateCourse'; // Updated hook
 import { useAuth } from '@/context/AuthContext';
-import useUser from "../../hooks/useUser"; // Assuming this hook is still relevant for user data
+import { getCourseById } from '@/api/courses'; // Import API to fetch single course for edit mode
 
 export default function CreateCourse() {
     const navigate = useNavigate();
-    const location = useLocation(); // Initialize useLocation to access navigation state
-    const { createCourse, isCreating, error: createError } = useCreateCourse();
+    const location = useLocation();
+    const { submitCourse, isCreating, error: submitError } = useCreateCourse(); // Renamed createCourse to submitCourse
     const { user, isAuthenticated, loading: authLoading } = useAuth();
-    const { fetchUser, loading: userLoading } = useUser(); // Assuming useUser is still needed for some reason, though useAuth usually covers it
 
-    useEffect(() => {
-        if (!isAuthenticated && !authLoading && !userLoading) {
-            fetchUser();
-        }
-    }, [isAuthenticated, authLoading, userLoading, fetchUser]);
+    // Determine if we are in edit mode by checking URL params
+    const editingCourseId = new URLSearchParams(location.search).get('id');
+    const isEditMode = !!editingCourseId;
 
-    // State to hold all course form data
     const [courseData, setCourseData] = useState({
         title: "",
         description: "",
         category: "",
         subject: "",
-        level: "beginner",
+        level: "Beginner", 
         price: 0,
-        thumbnail: null, // This will hold the File object
+        thumbnail: null, // Will hold File object for new upload, or URL string for existing
         chapters: [],
         tags: [],
         contentLinks: [],
+        // No need for 'status' here, it's set on submission
     });
 
     const [tagsInput, setTagsInput] = useState("");
     const [contentLinksInput, setContentLinksInput] = useState("");
-    const [currentStep, setCurrentStep] = useState(1); // Form step indicator
-    const [thumbnailPreview, setThumbnailPreview] = useState(null); // For displaying image preview
+    const [currentStep, setCurrentStep] = useState(1);
+    const [thumbnailPreview, setThumbnailPreview] = useState(null); // For displaying image preview (File URL or existing image URL)
+    const [isLoadingCourseData, setIsLoadingCourseData] = useState(isEditMode); // New loading state for fetching course data in edit mode
 
-    // --- EFFECT TO PRE-FILL DATA FROM AI GENERATOR ---
+    // --- EFFECT TO PRE-FILL DATA (from AI Generator or Edit Mode) ---
     useEffect(() => {
-        if (location.state?.prefillCourseData) {
-            const { prefillCourseData } = location.state;
+        const fetchAndPrefillCourse = async () => {
+            if (isEditMode && editingCourseId) {
+                // Case: Edit Mode - Fetch existing course data
+                setIsLoadingCourseData(true);
+                try {
+                    const courseToEdit = await getCourseById(editingCourseId);
+                    if (courseToEdit) {
+                        setCourseData({
+                            title: courseToEdit.title || "",
+                            description: courseToEdit.description || "",
+                            category: courseToEdit.category || "",
+                            subject: courseToEdit.subject || "",
+                            level: courseToEdit.level || "Beginner",
+                            price: courseToEdit.price || 0,
+                            thumbnail: courseToEdit.thumbnail || null, // Keep original URL
+                            chapters: courseToEdit.chapters || [],
+                            tags: courseToEdit.tags || [],
+                            contentLinks: courseToEdit.contentLinks || [],
+                        });
+                        // Set thumbnail preview to existing URL for display
+                        setThumbnailPreview(courseToEdit.thumbnail || null); 
+                        setTagsInput(courseToEdit.tags?.join(', ') || "");
+                        setContentLinksInput(courseToEdit.contentLinks?.join('\n') || "");
+                    } else {
+                        toast.error("Course not found for editing.");
+                        navigate(createPageUrl("EducatorDashboard"), { replace: true });
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch course for editing:", error);
+                    toast.error("Failed to load course for editing. Please try again.");
+                    navigate(createPageUrl("EducatorDashboard"), { replace: true });
+                } finally {
+                    setIsLoadingCourseData(false);
+                }
+            } else if (location.state?.prefillCourseData) {
+                // Case: AI Generator prefill (only if not in edit mode)
+                const { prefillCourseData } = location.state;
+                setCourseData(prevData => {
+                    const newChapters = prefillCourseData.chapters?.map(aiChapter => ({
+                        title: aiChapter.title,
+                        lectures: aiChapter.lectures?.map(aiLessonTitle => ({
+                            title: aiLessonTitle,
+                            video_url: "",
+                            duration: 0,
+                            is_preview_free: false
+                        })) || []
+                    })) || [];
 
-            setCourseData(prevData => {
-                // Map AI-generated chapters and lessons to your courseData.chapters structure
-                const newChapters = prefillCourseData.chapters.map(aiChapter => ({
-                    title: aiChapter.title,
-                    lectures: aiChapter.lectures.map(aiLessonTitle => ({
-                        title: aiLessonTitle,
-                        video_url: "", // AI doesn't provide this, leave empty for manual input
-                        duration: 0,   // AI doesn't provide this, leave 0 for manual input
-                        is_preview_free: false // AI doesn't provide this, leave false for manual input
-                    }))
-                }));
+                    return {
+                        ...prevData,
+                        title: prefillCourseData.title || prevData.title,
+                        description: prefillCourseData.description || prevData.description,
+                        level: prefillCourseData.level || prevData.level || "Beginner",
+                        chapters: newChapters,
+                    };
+                });
+                // Clear the state after use to prevent re-applying on refresh
+                navigate(location.pathname, { replace: true, state: {} });
+                setIsLoadingCourseData(false); // No async fetch needed here
+            } else {
+                // Case: Fresh "Create New Course" mode
+                setIsLoadingCourseData(false); 
+            }
+        };
 
-                // Update courseData state with pre-filled values
-                return {
-                    ...prevData,
-                    title: prefillCourseData.title || prevData.title,
-                    description: prefillCourseData.description || prevData.description,
-                    level: prefillCourseData.level || prevData.level, // Use AI's level if provided
-                    chapters: newChapters,
-                    // Subject, Category, Price, Thumbnail, Tags, ContentLinks
-                    // are not generated by the AI outline, so they remain as is
-                    // or user fills them manually.
-                };
-            });
-
-            // Clear the state after use to prevent re-applying on refresh or subsequent visits
-            navigate(location.pathname, { replace: true, state: {} });
+        // Only attempt to fetch/prefill once auth status is known
+        if (!authLoading) { 
+            fetchAndPrefillCourse();
         }
-    }, [location.state, navigate]); // Depend on location.state and navigate
+    }, [location.state, navigate, editingCourseId, isEditMode, authLoading]);
 
 
     const steps = [
@@ -134,9 +171,10 @@ export default function CreateCourse() {
     const handleThumbnailChange = useCallback((e) => {
         const file = e.target.files[0];
         if (file) {
-            setCourseData(prev => ({ ...prev, thumbnail: file }));
-            setThumbnailPreview(URL.createObjectURL(file));
+            setCourseData(prev => ({ ...prev, thumbnail: file })); // Set the File object
+            setThumbnailPreview(URL.createObjectURL(file)); // Create URL for preview
         } else {
+            // If file is cleared, reset thumbnail in state and preview
             setCourseData(prev => ({ ...prev, thumbnail: null }));
             setThumbnailPreview(null);
         }
@@ -263,13 +301,12 @@ export default function CreateCourse() {
     const handleSubmit = useCallback(async (isDraft = false) => {
         // Client-side validation for Step 1
         if (currentStep === 1) {
-            if (!courseData.title.trim() || !courseData.description.trim() || !courseData.category.trim() || !courseData.subject.trim() || courseData.price === null || isNaN(courseData.price) || courseData.price < 0) {
-                toast.error('Please fill in all required basic course details correctly, including Subject and Category.');
-                return;
-            }
-            // Add validation for thumbnail file
-            if (!courseData.thumbnail) {
-                toast.error('Please upload a course thumbnail image.');
+            // If editing and thumbnail is still a URL string, allow it.
+            // If it's a new File object, or null (meaning no new file selected), require it.
+            const isThumbnailProvided = courseData.thumbnail instanceof File || typeof courseData.thumbnail === 'string';
+
+            if (!courseData.title.trim() || !courseData.description.trim() || !courseData.category.trim() || !courseData.subject.trim() || courseData.price === null || isNaN(courseData.price) || courseData.price < 0 || !isThumbnailProvided) {
+                toast.error('Please fill in all required basic course details correctly, including Subject, Category, Price, and upload/confirm a thumbnail.');
                 return;
             }
         }
@@ -291,83 +328,99 @@ export default function CreateCourse() {
                 }
                 for (const lecture of chapter.lectures) {
                     if (!lecture.title.trim() || !lecture.video_url.trim() || lecture.duration === null || isNaN(lecture.duration) || lecture.duration <= 0) {
-                        toast.error(`All lectures in chapter "${chapter.title}" must have a title, video URL, and a valid duration.`);
+                        toast.error(`All lectures in chapter "${chapter.title}" must have a title, video URL, and a valid duration (greater than 0).`);
                         return;
                     }
                 }
             }
         }
 
-        if (authLoading || userLoading) {
-            toast.info("Please wait, checking user authentication status...");
+        if (authLoading || isLoadingCourseData || isCreating) { // Add isCreating to disable during submission
+            toast.info("Please wait, loading data or processing request...");
             return;
         }
 
         if (!isAuthenticated || !user || !user._id) {
-            toast.error("You must be logged in as a valid educator to create a course.");
+            toast.error("You must be logged in as a valid educator to create/edit a course.");
             navigate(createPageUrl("Login"));
             return;
         }
 
-
         try {
             const totalDuration = calculateTotalDuration();
 
-            // Prepare the payload for the backend API call
-            // When sending a file, you'll typically use FormData
             const formData = new FormData();
-            for (const key in courseData) {
-                if (key === 'chapters' || key === 'tags' || key === 'contentLinks') {
-                    formData.append(key, JSON.stringify(courseData[key]));
-                } else if (key === 'thumbnail' && courseData[key] instanceof File) {
-                    formData.append(key, courseData[key]); // Append the File object
-                } else {
-                    formData.append(key, courseData[key]);
-                }
-            }
-            formData.append('educator', user._id);
+            // Append basic fields
+            formData.append('title', courseData.title);
+            formData.append('description', courseData.description);
+            formData.append('category', courseData.category);
+            formData.append('subject', courseData.subject);
+            formData.append('level', courseData.level);
+            formData.append('price', courseData.price);
             formData.append('duration', totalDuration);
-            formData.append('status', isDraft ? 'Draft' : 'Pending Review');
+            formData.append('status', isDraft ? 'Draft' : 'Pending Review'); // Status for new or updated course
 
+            // Handle thumbnail: send File object if newly selected, otherwise it won't be appended.
+            // If it's a URL (existing thumbnail), we do NOT append it to FormData unless your
+            // backend expects a string for existing URLs, which is less common for image uploads.
+            // The backend's `updateCourse` should implicitly keep the old thumbnail if no new file is uploaded.
+            if (courseData.thumbnail instanceof File) {
+                formData.append('thumbnail', courseData.thumbnail);
+            }
+
+
+            // Append JSON stringified arrays
+            formData.append('chapters', JSON.stringify(courseData.chapters));
+            formData.append('tags', JSON.stringify(courseData.tags));
+            formData.append('contentLinks', JSON.stringify(courseData.contentLinks));
+
+            // Educator ID is crucial for both create and update to verify ownership
+            formData.append('educator', user._id); 
 
             // Call the useCreateCourse hook's function to send data to backend
-            // The useCreateCourse hook will need to be updated to handle FormData
-            const newCourse = await createCourse(formData);
+            // Pass editingCourseId if in edit mode
+            const savedCourse = await submitCourse(formData, editingCourseId);
 
-            if (newCourse) {
-                toast.success(`Course "${newCourse.title}" ${isDraft ? 'saved as draft' : 'submitted for review'}!`);
+            if (savedCourse) {
                 navigate(createPageUrl("EducatorDashboard"));
             }
         } catch (error) {
             console.error("Error during course submission in component:", error);
-            if (!createError) { // Only show generic error if useCreateCourse didn't already set one
-                toast.error(error.message || "Failed to create course. Please try again.");
+            // Error handling is mostly managed by useCreateCourse, but a fallback here
+            if (!submitError) { 
+                toast.error(error.message || "Failed to save course. Please try again.");
             }
         }
     }, [
         courseData,
         calculateTotalDuration,
-        createCourse,
+        submitCourse, // Now submitCourse from useCreateCourse
         navigate,
         currentStep,
         user,
         isAuthenticated,
         authLoading,
-        userLoading,
-        createError
+        isLoadingCourseData,
+        submitError,
+        isEditMode,
+        editingCourseId
     ]);
 
-    if (authLoading || userLoading) {
+    // Show loading for initial course data fetch in edit mode or auth loading
+    if (authLoading || isLoadingCourseData || isCreating) { // isCreating added to show spinner during submission
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">
-                <p>Loading user data, please wait...</p>
+                <Loader2 className="w-8 h-8 animate-spin mr-3" />
+                <p>
+                    {isCreating ? "Saving course..." : "Loading course data, please wait..."}
+                </p>
             </div>
         );
     }
 
     // Redirect if not authenticated AFTER loading is complete
     if (!isAuthenticated || !user || !user._id) {
-        toast.error("You must be logged in to create a course.");
+        toast.error("You must be logged in to create or edit a course.");
         navigate(createPageUrl("Login"));
         return null; // Don't render the form while redirecting
     }
@@ -387,10 +440,10 @@ export default function CreateCourse() {
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                            Create New Course
+                            {isEditMode ? "Edit Course" : "Create New Course"}
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400">
-                            Share your knowledge with the world
+                            {isEditMode ? "Update your course details" : "Share your knowledge with the world"}
                         </p>
                     </div>
                 </div>
@@ -550,6 +603,11 @@ export default function CreateCourse() {
                                         id="thumbnail-file-input"
                                     />
                                 </div>
+                                {isEditMode && typeof courseData.thumbnail === 'string' && (
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                        Current thumbnail: <a href={courseData.thumbnail} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline truncate inline-block max-w-xs">{courseData.thumbnail}</a> (Upload new file to change)
+                                    </p>
+                                )}
                             </div>
 
                             {/* Tags Input */}
@@ -602,8 +660,10 @@ https://github.com/your-repo
                               <Button
                                     onClick={() => {
                                         // Re-run validation before proceeding to next step
-                                        if (!courseData.title.trim() || !courseData.description.trim() || !courseData.category.trim() || !courseData.subject.trim() || courseData.price === null || isNaN(courseData.price) || courseData.price < 0 || !courseData.thumbnail) {
-                                            toast.error('Please fill in all required basic course details correctly, including Subject, Category, and upload a thumbnail.');
+                                        const isThumbnailProvided = courseData.thumbnail instanceof File || typeof courseData.thumbnail === 'string';
+
+                                        if (!courseData.title.trim() || !courseData.description.trim() || !courseData.category.trim() || !courseData.subject.trim() || courseData.price === null || isNaN(courseData.price) || courseData.price < 0 || !isThumbnailProvided) {
+                                            toast.error('Please fill in all required basic course details correctly, including Subject, Category, Price, and upload/confirm a thumbnail.');
                                         } else {
                                             setCurrentStep(2);
                                         }
@@ -617,7 +677,7 @@ https://github.com/your-repo
                     </Card>
                 )}
 
-                {/* Step 2: Curriculum (No changes here, but includes chapters/lectures) */}
+                {/* Step 2: Curriculum */}
                 {currentStep === 2 && (
                     <Card className="border-0 shadow-lg">
                         <CardHeader>
@@ -633,7 +693,7 @@ https://github.com/your-repo
                             {courseData.chapters.length > 0 ? (
                                 <div className="space-y-6">
                                     {courseData.chapters.map((chapter, chapterIndex) => (
-                                        <div key={chapterIndex} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                        <div key={chapter._id || chapterIndex} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                                             <div className="flex items-center justify-between mb-4">
                                                 <Input
                                                     value={chapter.title}
@@ -654,7 +714,8 @@ https://github.com/your-repo
 
                                             <div className="space-y-3">
                                                 {chapter.lectures.map((lecture, lectureIndex) => (
-                                                    <div key={lectureIndex} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                                                    // Use lecture._id as key if available, fallback to index
+                                                    <div key={lecture._id || lectureIndex} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                                             <Input
                                                                 value={lecture.title}
@@ -738,7 +799,7 @@ https://github.com/your-repo
                                     onClick={() => {
                                         // Re-run validation before proceeding to next step
                                         if (courseData.chapters.length === 0 || courseData.chapters.some(ch => !ch.title.trim() || ch.lectures.length === 0 || ch.lectures.some(lec => !lec.title.trim() || !lec.video_url.trim() || lec.duration <= 0))) {
-                                            toast.error('Please ensure all chapters and lectures have valid titles, video URLs, and durations.');
+                                            toast.error('Please ensure all chapters and lectures have valid titles, video URLs, and durations (greater than 0).');
                                         } else {
                                             setCurrentStep(3);
                                         }
@@ -820,7 +881,7 @@ https://github.com/your-repo
                                     </h3>
                                     <div className="space-y-3">
                                         {courseData.chapters.map((chapter, index) => (
-                                            <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                            <div key={chapter._id || index} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                                                 <h4 className="font-medium text-gray-900 dark:text-white mb-2">
                                                     Chapter {index + 1}: {chapter.title}
                                                 </h4>
@@ -832,7 +893,7 @@ https://github.com/your-repo
                                     </div>
                                 </div>
 
-                                <div className="flex justify-between">
+                                <div className="flex justify-between mt-8">
                                     <Button variant="outline" onClick={() => setCurrentStep(2)}>
                                         Previous
                                     </Button>
@@ -854,9 +915,9 @@ https://github.com/your-repo
                                         </Button>
                                     </div>
                                 </div>
-                                {createError && (
+                                {submitError && ( // Use submitError from the hook
                                     <div className="text-red-500 mt-4 text-center">
-                                        Error: {createError.message || 'Something went wrong while creating the course.'}
+                                        Error: {submitError.message || 'Something went wrong while saving/publishing the course.'}
                                     </div>
                                 )}
                             </div>

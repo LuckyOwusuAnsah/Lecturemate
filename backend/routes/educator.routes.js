@@ -13,7 +13,6 @@ import {
   getEducatorDashboardStats,
 } from "../controllers/educator.controller.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
-import multer from 'multer';
 const educatorRouter = express.Router();
 import upload from "../middleware/uploadMiddleware.js"; 
 // All educator routes are protected and must have role = 'educator'
@@ -35,7 +34,7 @@ educatorRouter.get("/tools", getTeachingTools);
 
 // Courses
 educatorRouter.post("/courses", upload.single('thumbnail'), createCourse);
-educatorRouter.put("/courses/:courseId", updateCourse);
+educatorRouter.put("/courses/:courseId", upload.single('thumbnail'), updateCourse);
 educatorRouter.get("/my-courses", getMyCourses);
 educatorRouter.get('/dashboard-stats', getEducatorDashboardStats);
 

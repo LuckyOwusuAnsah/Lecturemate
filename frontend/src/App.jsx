@@ -35,7 +35,6 @@ const PrivateRoute = ({ children, allowedRoles = [], requiresOnboarding = false 
 
   // 1. Check Authentication
   if (!isAuthenticated) {
-   toast.info("Please log in to access this page.");
    navigate("/Login", { state: { from: location }, replace: true }); 
    return;
   }
@@ -44,10 +43,8 @@ const PrivateRoute = ({ children, allowedRoles = [], requiresOnboarding = false 
   if (requiresOnboarding && !isOnboardingComplete) {
    // User is logged in but onboarding is not complete
    if (user?.role === "student") {
-    toast.warn("Please complete your student onboarding first.");
     navigate("/StudentOnboarding", { replace: true });
    } else if (user?.role === "educator") {
-    toast.warn("Please complete your educator onboarding first.");
     navigate("/EducatorOnboarding", { replace: true });
    } else {
     // Fallback for unexpected roles not having a specific onboarding
@@ -163,7 +160,7 @@ function App() {
      </PrivateRoute>
     } />
     <Route path='/CourseDetail' element={
-     <PrivateRoute allowedRoles={['student']} requiresOnboarding={true}>
+     <PrivateRoute allowedRoles={['student', 'educator']} requiresOnboarding={true}>
       <CourseDetail />
      </PrivateRoute>
     } />

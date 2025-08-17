@@ -176,7 +176,7 @@ export default function Home() {
                     <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6">
                         Find exactly what you're looking for across all categories and subjects.
                     </p>
-                    <Link to={createPageUrl("CoursesPage")}>
+                    <Link to={createPageUrl("Courses")}>
                         <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                             <BookOpen className="w-5 h-5 mr-2" />
                             Browse All Courses

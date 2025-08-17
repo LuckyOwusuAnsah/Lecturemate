@@ -200,7 +200,7 @@ export default function Wellness() {
                 }
               </CardContent>
             </Card> */}
-            {/* <WellnessTips /> */}
+            <WellnessTips />
           </div>
 
           {/* Right Section: Embedded AI Counselor Chat */}

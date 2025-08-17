@@ -3,7 +3,7 @@ import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
 import { AzureKeyCredential } from "@azure/core-auth";
 
 // --- AI Service Configuration ---
-const GITHUB_AI_TOKEN = process.env.GITHUB_OPENAI_API_KEY;
+const GITHUB_AI_TOKEN =process.env.GITHUB_OPENAI_API_KEY;
 const GITHUB_AI_ENDPOINT = "https://models.github.ai/inference";
 const GITHUB_AI_MODEL = "openai/gpt-4.1";
 
