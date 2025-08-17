@@ -42,7 +42,7 @@ export default function CreateCourse() {
         description: "",
         category: "",
         subject: "",
-        level: "Beginner", 
+        level: "Beginner",
         price: 0,
         thumbnail: null, // Will hold File object for new upload, or URL string for existing
         chapters: [],
@@ -79,7 +79,7 @@ export default function CreateCourse() {
                             contentLinks: courseToEdit.contentLinks || [],
                         });
                         // Set thumbnail preview to existing URL for display
-                        setThumbnailPreview(courseToEdit.thumbnail || null); 
+                        setThumbnailPreview(courseToEdit.thumbnail || null);
                         setTagsInput(courseToEdit.tags?.join(', ') || "");
                         setContentLinksInput(courseToEdit.contentLinks?.join('\n') || "");
                     } else {
@@ -99,12 +99,8 @@ export default function CreateCourse() {
                 setCourseData(prevData => {
                     const newChapters = prefillCourseData.chapters?.map(aiChapter => ({
                         title: aiChapter.title,
-                        lectures: aiChapter.lectures?.map(aiLessonTitle => ({
-                            title: aiLessonTitle,
-                            video_url: "",
-                            duration: 0,
-                            is_preview_free: false
-                        })) || []
+                        // FIX: Directly use aiChapter.lectures as they are already correctly formatted objects
+                        lectures: aiChapter.lectures || []
                     })) || [];
 
                     return {
@@ -120,12 +116,12 @@ export default function CreateCourse() {
                 setIsLoadingCourseData(false); // No async fetch needed here
             } else {
                 // Case: Fresh "Create New Course" mode
-                setIsLoadingCourseData(false); 
+                setIsLoadingCourseData(false);
             }
         };
 
         // Only attempt to fetch/prefill once auth status is known
-        if (!authLoading) { 
+        if (!authLoading) {
             fetchAndPrefillCourse();
         }
     }, [location.state, navigate, editingCourseId, isEditMode, authLoading]);
@@ -375,7 +371,7 @@ export default function CreateCourse() {
             formData.append('contentLinks', JSON.stringify(courseData.contentLinks));
 
             // Educator ID is crucial for both create and update to verify ownership
-            formData.append('educator', user._id); 
+            formData.append('educator', user._id);
 
             // Call the useCreateCourse hook's function to send data to backend
             // Pass editingCourseId if in edit mode
@@ -387,7 +383,7 @@ export default function CreateCourse() {
         } catch (error) {
             console.error("Error during course submission in component:", error);
             // Error handling is mostly managed by useCreateCourse, but a fallback here
-            if (!submitError) { 
+            if (!submitError) {
                 toast.error(error.message || "Failed to save course. Please try again.");
             }
         }
