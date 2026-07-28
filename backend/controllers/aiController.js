@@ -230,7 +230,7 @@ export const writeCourseDescription = asyncHandler(async (req, res) => {
     }
 });
 
-export const createCourseThumbnailImage = async (req, res) => {
+export const createCourseThumbnailImage = asyncHandler(async (req, res) => {
     const { topic, styleTone, additionalContext } = req.body;
 
     if (!topic) {
@@ -255,7 +255,7 @@ export const createCourseThumbnailImage = async (req, res) => {
         console.error('Error in createCourseThumbnailImage controller:', error);
         res.status(500).json({ message: 'Failed to generate thumbnail image.', error: error.message });
     }
-};
+});
 
 export const buildQuizAssessment = asyncHandler(async (req, res) => {
     const { topic, difficulty, numQuestions, questionTypes, additionalContext } = req.body;

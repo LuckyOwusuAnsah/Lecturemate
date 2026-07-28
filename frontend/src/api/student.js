@@ -41,3 +41,18 @@ export const markLectureComplete = async (enrollmentId, lectureId) => {
         const res = await API.put(`/student/enrollments/${enrollmentId}/complete-lecture`, { lectureId });
         return res.data;
 };
+
+export const getWishlist = async () => {
+  const res = await API.get("/student/wishlist");
+  return res.data;
+};
+
+export const addToWishlist = async (courseId) => {
+  const res = await API.post(`/student/wishlist/${courseId}`);
+  return res.data;
+};
+
+export const removeFromWishlist = async (courseId) => {
+  const res = await API.delete(`/student/wishlist/${courseId}`);
+  return res.data;
+};

@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import StudentProfile from "../models/StudentProfileModel.js";
 import Enrollment from "../models/EnrollmentModel.js";
 import Course from "../models/CourseModel.js";
+import User from "../models/UserModel.js";
 import { logActivity } from "../utils/logActivity.js";
 
 // @desc    Get student profile
@@ -186,9 +187,53 @@ export const markLectureComplete = asyncHandler(async (req, res) => {
   }
 
   await enrollment.save();
-  
+
         // Log activity
       await logActivity(req.user._id, "Complete", `Completed ${course.title}`);
 
   res.status(200).json(enrollment); // Return the updated enrollment object
+});
+
+// @desc    Get the logged-in student's wishlisted courses
+// @route   GET /api/student/wishlist
+// @access  Private
+export const getWishlist = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id).populate("wishlist");
+  res.status(200).json(user.wishlist);
+});
+
+// @desc    Add a course to the logged-in student's wishlist
+// @route   POST /api/student/wishlist/:courseId
+// @access  Private
+export const addToWishlist = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    res.status(404);
+    throw new Error("Course not found");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $addToSet: { wishlist: courseId } },
+    { new: true }
+  ).populate("wishlist");
+
+  res.status(200).json(user.wishlist);
+});
+
+// @desc    Remove a course from the logged-in student's wishlist
+// @route   DELETE /api/student/wishlist/:courseId
+// @access  Private
+export const removeFromWishlist = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    { $pull: { wishlist: courseId } },
+    { new: true }
+  ).populate("wishlist");
+
+  res.status(200).json(user.wishlist);
 });

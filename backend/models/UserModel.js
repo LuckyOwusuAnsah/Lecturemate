@@ -51,6 +51,10 @@ const userSchema = mongoose.Schema(
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
+    wishlist: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Course" }],
+      default: [],
+    },
     // Add the activityHistory field to the User model
     activityHistory: {
       type: [userActivitySchema], // Array of the new userActivitySchema

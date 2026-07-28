@@ -2,3 +2,5 @@
 .env
 .draft
 /backend/migrations
+/uploads
+seed.js

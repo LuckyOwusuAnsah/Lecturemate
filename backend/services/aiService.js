@@ -90,33 +90,50 @@ const callApiWithBackoff = async (url, options, retries = 5, delay = 1000) => {
 
 
 export const generateImageWithImagen = async (prompt) => {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${API_KEY}`;
+    if (!API_KEY) {
+        throw new Error("GEMINI_API_KEY environment variable is not set.");
+    }
+
+    const MODEL = "gemini-3.1-flash-lite-image";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent`;
 
     const payload = {
-        instances: {
-            prompt: prompt
-        },
-        parameters: {
-            sampleCount: 1 // Request one image
+        contents: [
+            {
+                parts: [{ text: prompt }]
+            }
+        ],
+        generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"]
         }
     };
 
     try {
         const result = await callApiWithBackoff(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': API_KEY
+            },
             body: JSON.stringify(payload)
         });
 
-        if (result.predictions && result.predictions.length > 0 && result.predictions[0].bytesBase64Encoded) {
-            const base64Data = result.predictions[0].bytesBase64Encoded;
-            return `data:image/png;base64,${base64Data}`; // Return as a data URL
-        } else {
-            console.error('Imagen 4.0 API returned no image data:', result);
-            throw new Error('No image data returned from Imagen 4.0 API.');
+        const parts = result?.candidates?.[0]?.content?.parts;
+        if (!parts || parts.length === 0) {
+            console.error('Gemini image API returned no parts:', result);
+            throw new Error('No image data returned from Gemini image API.');
         }
+
+        const imagePart = parts.find(p => p.inlineData);
+        if (!imagePart) {
+            console.error('Gemini image API returned no image part:', parts);
+            throw new Error('Gemini image API did not return an image in its response.');
+        }
+
+        const { mimeType, data } = imagePart.inlineData;
+        return `data:${mimeType};base64,${data}`;
     } catch (error) {
-        console.error('Error calling Imagen 4.0 API:', error);
+        console.error('Error calling Gemini image generation API:', error);
         throw new Error(`Failed to generate image: ${error.message}`);
     }
 };

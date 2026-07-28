@@ -57,7 +57,7 @@ export default function DiscussionSection({ courseId }) {
             const newDiscussion = await createDiscussionAPI({
                 title: newDiscussionTitle,
                 content: newDiscussionContent,
-                course: courseId, // Link to the current course
+                courseId, // Link to the current course
             });
             setDiscussions(prev => [newDiscussion, ...prev]); // Add new discussion to top
             setNewDiscussionTitle('');

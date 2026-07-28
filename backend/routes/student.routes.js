@@ -7,6 +7,9 @@ import {
   enrollInCourse,
   getLearningProgress,
   markLectureComplete,
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
 } from "../controllers/student.controller.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
@@ -37,5 +40,13 @@ studentRouter.get("/progress/:courseId", getLearningProgress);
 // @route   PUT /api/students/enrollments/:enrollmentId/complete-lecture
 studentRouter.route("/enrollments/:enrollmentId/complete-lecture").put(protect, markLectureComplete);
 
+// @route   GET /api/student/wishlist
+studentRouter.get("/wishlist", getWishlist);
+
+// @route   POST /api/student/wishlist/:courseId
+studentRouter.post("/wishlist/:courseId", addToWishlist);
+
+// @route   DELETE /api/student/wishlist/:courseId
+studentRouter.delete("/wishlist/:courseId", removeFromWishlist);
 
 export default studentRouter;

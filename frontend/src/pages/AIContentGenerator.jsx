@@ -69,7 +69,12 @@ export default function AIContentGenerator() {
       description: "Create compelling course descriptions that attract students",
       icon: FileText
     },
-    
+    {
+      id: "thumbnail-generator",
+      name: "Course Thumbnail Generator",
+      description: "Generate eye-catching AI image thumbnails for your courses",
+      icon: Image
+    },
     {
       id: "quiz-generator",
       name: "Quiz & Assessment Builder",
@@ -348,6 +353,49 @@ export default function AIContentGenerator() {
                 value={descriptionHook.additionalContext}
                 onChange={(e) => descriptionHook.setAdditionalContext(e.target.value)}
                 placeholder="Any specific details to highlight, keywords, etc."
+                rows={3}
+              />
+            </div>
+          </>
+        );
+      case "thumbnail-generator":
+        return (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Course Topic *
+              </label>
+              <Input
+                value={thumbnailHook.topic}
+                onChange={(e) => thumbnailHook.setTopic(e.target.value)}
+                placeholder="e.g., Data Science, Yoga for Beginners"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Style/Tone
+              </label>
+              <Select value={thumbnailHook.styleTone} onValueChange={thumbnailHook.setStyleTone}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Professional">Professional</SelectItem>
+                  <SelectItem value="Creative">Creative</SelectItem>
+                  <SelectItem value="Minimalist">Minimalist</SelectItem>
+                  <SelectItem value="Vibrant">Vibrant</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Additional Context
+              </label>
+              <Textarea
+                value={thumbnailHook.additionalContext}
+                onChange={(e) => thumbnailHook.setAdditionalContext(e.target.value)}
+                placeholder="Key elements to include, color preferences, mood, etc."
                 rows={3}
               />
             </div>
@@ -649,7 +697,7 @@ export default function AIContentGenerator() {
         </div>
 
         {/* Tool Selection */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {tools.map((tool) => (
             <Card
               key={tool.id}

@@ -4,7 +4,7 @@ import API from './axios'; // Your configured Axios instance
 export const fetchDiscussionsForCourse = async (courseId) => {
     try {
         const response = await API.get(`/discussions?courseId=${courseId}`);
-        return response.data.data.discussions;
+        return response.data;
     } catch (error) {
         console.error(`Error fetching discussions for course ${courseId}:`, error);
         throw error;
@@ -15,7 +15,7 @@ export const fetchDiscussionsForCourse = async (courseId) => {
 export const fetchDiscussionById = async (discussionId) => {
     try {
         const response = await API.get(`/discussions/${discussionId}`);
-        return response.data.data.discussion;
+        return response.data;
     } catch (error) {
         console.error(`Error fetching discussion ${discussionId}:`, error);
         throw error;
@@ -26,7 +26,7 @@ export const fetchDiscussionById = async (discussionId) => {
 export const createDiscussionAPI = async (discussionData) => {
     try {
         const response = await API.post('/discussions', discussionData);
-        return response.data.data.discussion;
+        return response.data;
     } catch (error) {
         console.error("Error creating discussion:", error);
         throw error;
@@ -37,7 +37,7 @@ export const createDiscussionAPI = async (discussionData) => {
 export const addCommentToDiscussionAPI = async (discussionId, commentText) => {
     try {
         const response = await API.post(`/discussions/${discussionId}/comments`, { text: commentText });
-        return response.data.data.discussion; // Backend returns updated discussion
+        return response.data; // Backend returns the updated discussion
     } catch (error) {
         console.error(`Error adding comment to discussion ${discussionId}:`, error);
         throw error;

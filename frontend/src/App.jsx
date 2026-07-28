@@ -13,6 +13,8 @@ import AdminPanel from "./pages/AdminPanel";
 import CourseDetail from "./pages/Student/CourseDetail";
 import EducatorOnboarding from "./pages/Educator/EducatorOnboarding.jsx";
 import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
+import SetPassword from "./pages/SetPassword";
 import StudentOnboarding from "./pages/Student/StudentOnboarding.jsx";
 import { useAuth } from "./context/AuthContext.jsx"; 
 // import useUser from "./hooks/useUser"; // No longer directly needed in App.jsx for initial fetch
@@ -20,6 +22,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 import Analytics from "./pages/Educator/Analytics";
 import CoursesPage from "./pages/CoursesPage";
 import Wellness from "./pages/Student/Wellness";
+import Wishlist from "./pages/Student/Wishlist";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import CounselorChat from "./components/CounselorChat.jsx";
 
@@ -107,6 +110,8 @@ function App() {
     <Route path='/Home' element={<Home />} />
     <Route path='/Register' element={<Signup />} />
     <Route path='/Login' element={<Login />} />
+    <Route path='/forgot-password' element={<ForgotPassword />} />
+    <Route path='/set-password/:resetToken' element={<SetPassword />} />
     <Route path='/Courses' element={<CoursesPage />} />
         <Route path='/ai' element={<CounselorChat />} />
 
@@ -132,6 +137,11 @@ function App() {
     <Route path='/Wellness' element={
      <PrivateRoute allowedRoles={['student']} requiresOnboarding={true}>
       <Wellness />
+     </PrivateRoute>
+    } />
+    <Route path='/Wishlist' element={
+     <PrivateRoute allowedRoles={['student']} requiresOnboarding={true}>
+      <Wishlist />
      </PrivateRoute>
     } />
     <Route path='/AIContentGenerator' element={

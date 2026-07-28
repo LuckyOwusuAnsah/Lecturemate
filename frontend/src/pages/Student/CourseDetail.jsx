@@ -37,6 +37,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useFetchCourseDetail } from '@/hooks/useFetchCourseDetail';
 import { useCourseProgress } from '@/hooks/useCourseProgress'; // This hook will be implicitly updated by backend change
 import { toast } from 'react-toastify';
+import { getWishlist, addToWishlist, removeFromWishlist } from '@/api/student';
 
 export default function CourseDetail() {
     const navigate = useNavigate();
@@ -66,7 +67,9 @@ export default function CourseDetail() {
 
     const [videoToPlayInModal, setVideoToPlayInModal] = useState(null);
     const [showCertificate, setShowCertificate] = useState(false);
-    const [activeTab, setActiveTab] = useState('curriculum'); 
+    const [activeTab, setActiveTab] = useState('curriculum');
+    const [isWishlisted, setIsWishlisted] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
 
     useEffect(() => {
         if (!courseId) {
@@ -74,6 +77,50 @@ export default function CourseDetail() {
         }
         refetchCourse();
     }, [courseId, refetchCourse]);
+
+    useEffect(() => {
+        if (!courseId || !isAuthenticated) {
+            setIsWishlisted(false);
+            return;
+        }
+        let isCancelled = false;
+        getWishlist()
+            .then((wishlist) => {
+                if (isCancelled) return;
+                setIsWishlisted(wishlist.some((c) => c._id === courseId));
+            })
+            .catch(() => {
+                // Silently ignore - wishlist state just stays unknown/false
+            });
+        return () => {
+            isCancelled = true;
+        };
+    }, [courseId, isAuthenticated]);
+
+    const handleToggleWishlist = useCallback(async () => {
+        if (!isAuthenticated) {
+            toast.info("Please log in to use your wishlist.");
+            navigate(createPageUrl("Login"));
+            return;
+        }
+
+        setIsWishlistLoading(true);
+        try {
+            if (isWishlisted) {
+                await removeFromWishlist(courseId);
+                setIsWishlisted(false);
+                toast.success("Removed from wishlist");
+            } else {
+                await addToWishlist(courseId);
+                setIsWishlisted(true);
+                toast.success("Added to wishlist");
+            }
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Couldn't update your wishlist. Please try again.");
+        } finally {
+            setIsWishlistLoading(false);
+        }
+    }, [isAuthenticated, isWishlisted, courseId, navigate]);
 
     const allLectures = course?.chapters?.flatMap(chapter => chapter.lectures) || [];
 
@@ -354,9 +401,14 @@ export default function CourseDetail() {
                                                 <Play className="w-4 h-4 mr-2" />
                                                 Continue Learning
                                             </Button>
-                                            <Button variant="outline" className="w-full">
-                                                <Heart className="w-4 h-4 mr-2" />
-                                                Add to Wishlist
+                                            <Button
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={handleToggleWishlist}
+                                                disabled={isWishlistLoading}
+                                            >
+                                                <Heart className={`w-4 h-4 mr-2 ${isWishlisted ? 'fill-current text-red-500' : ''}`} />
+                                                {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                                             </Button>
                                         </div>
                                     ) : (
@@ -368,6 +420,15 @@ export default function CourseDetail() {
                                             >
                                                 <BookOpen className="w-4 h-4 mr-2" />
                                                 {isLoadingProgress ? 'Loading status...' : !isAuthenticated ? 'Login to Enroll' : 'Enroll Now'}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={handleToggleWishlist}
+                                                disabled={isWishlistLoading}
+                                            >
+                                                <Heart className={`w-4 h-4 mr-2 ${isWishlisted ? 'fill-current text-red-500' : ''}`} />
+                                                {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
                                             </Button>
                                             <Button variant="outline" className="w-full">
                                                 <Share2 className="w-4 h-4 mr-2" />

@@ -168,7 +168,7 @@ export default function StudentDashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                     <Link to={createPageUrl("Courses")}>
                         <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white dark:bg-gray-800">
                             <CardContent className="p-6 text-center">
@@ -196,6 +196,22 @@ export default function StudentDashboard() {
                                 </h3>
                                 <p className="text-gray-600 dark:text-gray-400 text-sm">
                                     Track your mood and mental wellness
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </Link>
+
+                    <Link to={createPageUrl("Wishlist")}>
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer border-0 bg-white dark:bg-gray-800">
+                            <CardContent className="p-6 text-center">
+                                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Heart className="w-6 h-6 text-red-500 fill-current" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                    My Wishlist
+                                </h3>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                                    Courses you've saved to check out later
                                 </p>
                             </CardContent>
                         </Card>

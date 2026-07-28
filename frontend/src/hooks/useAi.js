@@ -7,8 +7,8 @@ export const useWellnessInsights = (moodData, triggerFetch = false) => {
   const [error, setError] = useState(null);
 
   const fetchInsight = useCallback(async () => {
-    if (!moodData || !moodData.userId || !Array.isArray(moodData.moodEntries)) {
-      console.warn("useWellnessInsights: Essential mood data missing for AI insights. Skipping fetch.");
+    if (!moodData || !moodData.userId) {
+      console.warn("useWellnessInsights: userId missing for AI insights. Skipping fetch.");
       return;
     }
 

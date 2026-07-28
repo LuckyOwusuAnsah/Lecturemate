@@ -12,7 +12,7 @@ import coursesRouter from './routes/courses.routes.js';
 import reviewRouter from './routes/reviews.routes.js';
 import moodEntryRouter from './routes/moodEntry.routes.js';
 import aiRouter from './routes/ai.routes.js';
-import discoussionRoutes from './routes/discussionRoutes';
+import discoussionRoutes from './routes/discussionRoutes.js';
 
 dotenv.config();
 const port = process.env.PORT || 5000;
@@ -22,8 +22,19 @@ connectDB();
 const app = express();
 
  //Cross-Origin Resource Sharing
+ const allowedOrigins = [
+   'http://localhost:5173',
+   process.env.FRONTEND_URL,
+ ].filter(Boolean);
+
  app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }));
 

@@ -5,6 +5,7 @@ import User from "../models/UserModel.js";
 import generateToken from '../utils/generateToken.js'
 import { sendEmail } from "../utils/sendEmail.js";
 import { logActivity } from "../utils/logActivity.js";
+import { getJwtCookieOptions } from "../utils/cookieOptions.js";
 
 // Register
 export const register = asyncHandler(async (req, res) => {
@@ -159,7 +160,7 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
 // Logout
 export const logout = asyncHandler(async (req, res) => {
  res.cookie('jwt', '', {
-        httpOnly:true,
+        ...getJwtCookieOptions(),
         expires: new Date(0)
     })
         // Log activity
@@ -169,22 +170,28 @@ export const logout = asyncHandler(async (req, res) => {
 
 });
 
-// Forgot Password (Send Reset Token - Simulated)
+// Forgot Password (Send Reset Token)
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  
-    const user = await User.findOne({ email });
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-  
-    const resetToken = user.createPasswordResetToken();
-    await user.save();
-  
-    const resetUrl = `${process.env.FRONTEND_URL}/set-password/${resetToken}`;
-  
-    const message = `
+
+  const genericResponse = {
+    message: "If an account with that email exists, a reset link has been sent.",
+  };
+
+  const user = await User.findOne({ email });
+
+  // Always respond the same way whether or not the user exists,
+  // so this endpoint can't be used to enumerate registered emails.
+  if (!user) {
+    return res.json(genericResponse);
+  }
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${process.env.FRONTEND_URL}/set-password/${resetToken}`;
+
+  const message = `
  <h2>Hello ${user.name}</h2>
 <p>Please use the link below to reset your password</p>
 <p>The reset link is valid for 10 minutes</p>
@@ -194,14 +201,23 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 <p>Regards...</p>
 <p>Lecture Mate</p>
     `;
+
+  try {
     await sendEmail({
       send_to: user.email,
       subject: "FORGOT PASSWORD",
       message,
     });
-  
-    res.json({ message: "Reset link sent to email" });
+  } catch (err) {
+    // Roll back the token so a failed email doesn't leave a live reset link
+    // unreachable to the user, and don't leak the failure to the client.
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    console.error("Failed to send password reset email:", err.message);
+  }
 
+  res.json(genericResponse);
 });
 
 // Reset Password
@@ -230,6 +246,15 @@ if(!user){
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
+
+    // Force re-login on all devices by invalidating the current session cookie
+    res.cookie('jwt', '', {
+        ...getJwtCookieOptions(),
+        expires: new Date(0),
+    });
+
+    // Log activity
+    await logActivity(user._id, "Password Reset", "Reset account password");
 
     res.status(200).json({
         status: "Success",

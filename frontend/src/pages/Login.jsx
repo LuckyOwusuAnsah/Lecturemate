@@ -144,7 +144,7 @@ export default function Login() {
             </Button>
 
             <div className="flex justify-between text-sm text-gray-500 mt-4">
-              <a href="#" className="hover:underline">
+              <a href="/forgot-password" className="hover:underline">
                 Forgot password?
               </a>
               <a href="/register" className="hover:underline">
