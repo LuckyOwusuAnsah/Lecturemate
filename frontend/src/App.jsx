@@ -1,6 +1,9 @@
-import React, { useEffect } from "react";
-import { Route, Routes, useNavigate, useLocation } from "react-router-dom"; 
-import { toast } from "react-toastify"; 
+import React, { useEffect, useCallback } from "react";
+import { Route, Routes, useNavigate, useLocation } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useIdleTimeout } from "./hooks/useIdleTimeout";
+
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 import Layout from "./components/layout";
 import StudentDashboard from "./pages/Student/StudentDashboard.jsx";
@@ -88,10 +91,19 @@ const PrivateRoute = ({ children, allowedRoles = [], requiresOnboarding = false 
 
 
 function App() {
- const { loading: authLoading } = useAuth(); // Only need authLoading here
+ const { loading: authLoading, isAuthenticated, logout } = useAuth();
+ const navigate = useNavigate();
 
  // --- REMOVED THE REDUNDANT useEffect THAT CALLED fetchUser() ---
  // --- REMOVED useUser hook from App.jsx, as its fetch is now redundant ---
+
+ const handleIdleLogout = useCallback(async () => {
+  await logout();
+  toast.info("You've been logged out due to inactivity.");
+  navigate("/Login");
+ }, [logout, navigate]);
+
+ useIdleTimeout(isAuthenticated, IDLE_TIMEOUT_MS, handleIdleLogout);
 
  // Global loading state for initial app load:
  // Wait until authLoading is false, meaning the initial user check is complete
