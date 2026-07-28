@@ -12,6 +12,11 @@ import {
   getEducatorAnalytics,
   getEducatorDashboardStats,
 } from "../controllers/educator.controller.js";
+import {
+  createQuiz,
+  getAttemptsForQuiz,
+  gradeShortAnswers,
+} from "../controllers/quizController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 const educatorRouter = express.Router();
 import upload from "../middleware/uploadMiddleware.js"; 
@@ -37,6 +42,11 @@ educatorRouter.post("/courses", upload.single('thumbnail'), createCourse);
 educatorRouter.put("/courses/:courseId", upload.single('thumbnail'), updateCourse);
 educatorRouter.get("/my-courses", getMyCourses);
 educatorRouter.get('/dashboard-stats', getEducatorDashboardStats);
+
+// Quizzes
+educatorRouter.post("/courses/:courseId/quizzes", createQuiz);
+educatorRouter.get("/quizzes/:quizId/attempts", getAttemptsForQuiz);
+educatorRouter.put("/attempts/:attemptId/grade", gradeShortAnswers);
 
 // Approval request (optional)
 educatorRouter.post("/request-approval", requestApproval);

@@ -20,6 +20,7 @@ import { useAuth } from "./context/AuthContext.jsx";
 // import useUser from "./hooks/useUser"; // No longer directly needed in App.jsx for initial fetch
 
 import Analytics from "./pages/Educator/Analytics";
+import QuizGrading from "./pages/Educator/QuizGrading";
 import CoursesPage from "./pages/CoursesPage";
 import Wellness from "./pages/Student/Wellness";
 import Wishlist from "./pages/Student/Wishlist";
@@ -157,6 +158,11 @@ function App() {
     <Route path='/EducatorDashboard' element={
      <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
       <EducatorDashboard />
+     </PrivateRoute>
+    } />
+    <Route path='/QuizGrading' element={
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+      <QuizGrading />
      </PrivateRoute>
     } />
     <Route path='/CreateCourse' element={

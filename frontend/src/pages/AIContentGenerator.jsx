@@ -1,6 +1,7 @@
 // frontend/src/pages/AIContentGenerator.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
+import { toast } from "react-toastify";
 
 // Import UI components (assuming they are from a UI library like shadcn/ui)
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -31,6 +32,8 @@ import {
 
 // Import AuthContext to get user role
 import { useAuth } from "../context/AuthContext";
+import { getMyCourses } from "@/api/educator";
+import { createQuiz } from "@/api/quiz";
 
 export default function AIContentGenerator() {
   const { user, loading: authLoading, isAuthenticated } = useAuth();
@@ -42,6 +45,48 @@ export default function AIContentGenerator() {
   const descriptionHook = useCourseDescriptionWriter();
   const thumbnailHook = useCourseThumbnailIdeaCreator(); // This hook now returns thumbnailImage
   const quizHook = useQuizAssessmentBuilder();
+
+  // Publish-to-course state for the quiz generator
+  const [educatorCourses, setEducatorCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+  const [isPublishingQuiz, setIsPublishingQuiz] = useState(false);
+  const [publishedQuizId, setPublishedQuizId] = useState(null);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "educator") {
+      getMyCourses()
+        .then(setEducatorCourses)
+        .catch((err) => console.error("Failed to load courses for quiz publishing:", err));
+    }
+  }, [isAuthenticated, user]);
+
+  // A freshly generated quiz should be publishable again even if a previous one was published
+  useEffect(() => {
+    setPublishedQuizId(null);
+  }, [quizHook.quiz]);
+
+  const handlePublishQuiz = async () => {
+    if (!selectedCourseId) {
+      toast.error("Please select a course to publish this quiz to.");
+      return;
+    }
+
+    setIsPublishingQuiz(true);
+    try {
+      const published = await createQuiz(selectedCourseId, {
+        title: quizHook.topic?.trim() || "Untitled Quiz",
+        multiple_choice: quizHook.quiz.multiple_choice || [],
+        true_false: quizHook.quiz.true_false || [],
+        short_answer: quizHook.quiz.short_answer || [],
+      });
+      setPublishedQuizId(published._id);
+      toast.success("Quiz published to course!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to publish quiz.");
+    } finally {
+      setIsPublishingQuiz(false);
+    }
+  };
 
   // Determine which hook is active based on selectedTool
   const activeHook = (() => {
@@ -606,6 +651,31 @@ export default function AIContentGenerator() {
                 Copy All
               </Button>
             </div>
+
+            {user?.role === "educator" && (
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                  <SelectTrigger className="sm:w-64">
+                    <SelectValue placeholder="Select a course..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {educatorCourses.map((course) => (
+                      <SelectItem key={course._id} value={course._id}>
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handlePublishQuiz}
+                  disabled={isPublishingQuiz || !!publishedQuizId}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {publishedQuizId ? "Published" : isPublishingQuiz ? "Publishing..." : "Publish to Course"}
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-6">
               {/* Multiple Choice */}
               {quiz.multiple_choice && quiz.multiple_choice.length > 0 && (

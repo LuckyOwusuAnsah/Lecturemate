@@ -19,7 +19,8 @@ import {
     Eye,
     BarChart3,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    ClipboardCheck
 } from "lucide-react";
 
 import { useAuth } from '@/context/AuthContext';
@@ -281,6 +282,12 @@ export default function EducatorDashboard() {
                                                 <Button variant="outline" size="sm">
                                                     <BarChart3 className="w-4 h-4 mr-2" />
                                                     Analytics
+                                                </Button>
+                                                </Link>
+                                                <Link to={createPageUrl("QuizGrading", { courseId: course._id })}>
+                                                <Button variant="outline" size="sm">
+                                                    <ClipboardCheck className="w-4 h-4 mr-2" />
+                                                    Grade Quizzes
                                                 </Button>
                                                 </Link>
                                             </div>

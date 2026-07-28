@@ -29,7 +29,8 @@ import {
 // Components
 import VideoPlayer from "../../components/VideoPlayer";
 import ReviewSection from "../../components/ReviewSection"; 
-import DiscussionSection from "../../components/DiscussionSection"; 
+import DiscussionSection from "../../components/DiscussionSection";
+import QuizSection from "../../components/QuizSection";
 import CertificateModal from "../../components/CertificateModal";
 
 // Custom Hooks
@@ -464,6 +465,12 @@ export default function CourseDetail() {
                     >
                         Discussions
                     </button>
+                    <button
+                        className={`ml-4 px-4 py-2 text-lg font-medium ${activeTab === 'quizzes' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                        onClick={() => setActiveTab('quizzes')}
+                    >
+                        Quizzes
+                    </button>
                 </div>
             </div>
 
@@ -547,6 +554,10 @@ export default function CourseDetail() {
 
                         {activeTab === 'discussions' && (
                             <DiscussionSection courseId={course._id} />
+                        )}
+
+                        {activeTab === 'quizzes' && (
+                            <QuizSection courseId={course._id} />
                         )}
                     </div>
 

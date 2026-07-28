@@ -13,6 +13,7 @@ import reviewRouter from './routes/reviews.routes.js';
 import moodEntryRouter from './routes/moodEntry.routes.js';
 import aiRouter from './routes/ai.routes.js';
 import discoussionRoutes from './routes/discussionRoutes.js';
+import quizRouter from './routes/quiz.routes.js';
 
 dotenv.config();
 const port = process.env.PORT || 5000;
@@ -51,7 +52,8 @@ const app = express();
  app.use("/api/reviews", reviewRouter); 
 app.use("/api/moods", moodEntryRouter); 
 app.use("/api/ai", aiRouter); 
-app.use("/api/discussions", discoussionRoutes); 
+app.use("/api/discussions", discoussionRoutes);
+app.use("/api/quizzes", quizRouter);
 
 
 app.use(notFound);
