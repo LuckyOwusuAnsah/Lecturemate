@@ -11,6 +11,11 @@ import {
   addToWishlist,
   removeFromWishlist,
 } from "../controllers/student.controller.js";
+import {
+  getMyConversations,
+  getConversationWithEducator,
+  replyToEducator,
+} from "../controllers/privateMessageController.js";
 import { protect, authorizeRoles } from "../middleware/authMiddleware.js";
 
 const studentRouter = express.Router();
@@ -48,5 +53,10 @@ studentRouter.post("/wishlist/:courseId", addToWishlist);
 
 // @route   DELETE /api/student/wishlist/:courseId
 studentRouter.delete("/wishlist/:courseId", removeFromWishlist);
+
+// Private messages with educators
+studentRouter.get("/messages", getMyConversations);
+studentRouter.get("/messages/:educatorId", getConversationWithEducator);
+studentRouter.post("/messages/:educatorId", replyToEducator);
 
 export default studentRouter;

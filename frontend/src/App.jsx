@@ -28,6 +28,7 @@ import StudentWellness from "./pages/Educator/StudentWellness";
 import QuizGrading from "./pages/Educator/QuizGrading";
 import CoursesPage from "./pages/CoursesPage";
 import Wellness from "./pages/Student/Wellness";
+import Messages from "./pages/Student/Messages";
 import Wishlist from "./pages/Student/Wishlist";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import Terms from "./pages/Terms.jsx";
@@ -167,6 +168,11 @@ function App() {
     <Route path='/Wellness' element={
      <PrivateRoute allowedRoles={['student']} requiresOnboarding={true}>
       <Wellness />
+     </PrivateRoute>
+    } />
+    <Route path='/Messages' element={
+     <PrivateRoute allowedRoles={['student']} requiresOnboarding={true}>
+      <Messages />
      </PrivateRoute>
     } />
     <Route path='/Wishlist' element={

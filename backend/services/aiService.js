@@ -42,8 +42,18 @@ export const getChatCompletion = async (
   });
 
   if (isUnexpected(response)) {
-    console.error("GitHub AI API Error Response:", response.body.error);
-    throw new Error(`AI API Error: ${response.body.error.message || 'Unknown error occurred while calling AI service.'}`);
+    // The error body shape varies (OpenAI-style {error:{message}}, GitHub-style
+    // {message}, or something else entirely on auth/network failures), so log
+    // the raw status + body rather than assuming a shape and crashing here.
+    console.error("GitHub AI API Error Response:", {
+      status: response.status,
+      body: response.body,
+    });
+    const errorMessage =
+      response.body?.error?.message ||
+      response.body?.message ||
+      `AI service responded with status ${response.status}.`;
+    throw new Error(`AI API Error: ${errorMessage}`);
   }
 
   // Ensure response structure is as expected before accessing content

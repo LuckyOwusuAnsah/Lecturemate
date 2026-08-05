@@ -1,9 +1,22 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import { toast } from "react-toastify";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Users, AlertTriangle, TrendingUp, Loader2, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Heart,
+  Users,
+  AlertTriangle,
+  TrendingUp,
+  Loader2,
+  AlertCircle,
+  MessageCircle,
+  Send,
+} from "lucide-react";
 
 import { useStudentsWellness } from "@/hooks/useStudentsWellness";
+import { sendMessageToStudent, getConversationWithStudent } from "@/api/educator";
 import { useAuth } from "@/context/AuthContext";
 
 const MOOD_ICON = {
@@ -25,6 +38,50 @@ const MOOD_COLOR = {
 export default function StudentWellness() {
   const { user: authUser, isAuthenticated, loading: authLoading } = useAuth();
   const { students, loading, error, refetch } = useStudentsWellness();
+
+  const [openComposerFor, setOpenComposerFor] = useState(null);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const [thread, setThread] = useState([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+
+  const toggleComposer = async (studentId) => {
+    if (openComposerFor === studentId) {
+      setOpenComposerFor(null);
+      setMessageDraft("");
+      return;
+    }
+    setOpenComposerFor(studentId);
+    setMessageDraft("");
+    setThread([]);
+    setThreadLoading(true);
+    try {
+      const messages = await getConversationWithStudent(studentId);
+      setThread(messages);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to load conversation history.");
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
+  const handleSendMessage = async (studentId) => {
+    if (!messageDraft.trim()) {
+      toast.error("Message cannot be empty.");
+      return;
+    }
+    setSending(true);
+    try {
+      const newMessage = await sendMessageToStudent(studentId, messageDraft.trim());
+      setThread((prev) => [...prev, newMessage]);
+      setMessageDraft("");
+      toast.success("Message sent privately to the student.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send message.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const needsAttentionCount = useMemo(
     () => students.filter((s) => s.needsAttention).length,
@@ -162,51 +219,129 @@ export default function StudentWellness() {
                 {students.map((s) => (
                   <div
                     key={s.student._id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-lg border ${
+                    className={`p-4 rounded-lg border ${
                       s.needsAttention
                         ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
                         : "border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
-                        {s.latestMood ? MOOD_ICON[s.latestMood] : "—"}
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {s.student.name}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">
+                          {s.latestMood ? MOOD_ICON[s.latestMood] : "—"}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {s.student.name}
+                            </p>
+                            {s.needsAttention && (
+                              <Badge className="bg-red-600 text-white">
+                                Needs Attention
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {s.student.email}
                           </p>
-                          {s.needsAttention && (
-                            <Badge className="bg-red-600 text-white">
-                              Needs Attention
-                            </Badge>
-                          )}
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                            {s.courses.join(", ")}
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {s.student.email}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
-                          {s.courses.join(", ")}
-                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-4 mt-3 sm:mt-0">
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Weekly Average
+                          </p>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {s.weeklyAverage !== null ? `${s.weeklyAverage} / 5` : "No data"}
+                          </p>
+                        </div>
+                        {s.latestMood && (
+                          <Badge className={MOOD_COLOR[s.latestMood]}>
+                            {s.latestMood.replace("_", " ")}
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          variant={s.needsAttention ? "default" : "outline"}
+                          className={s.needsAttention ? "bg-red-600 hover:bg-red-700 text-white" : ""}
+                          onClick={() => toggleComposer(s.student._id)}
+                        >
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          Message
+                        </Button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 mt-3 sm:mt-0">
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Weekly Average
+                    {openComposerFor === s.student._id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          This message is private between you and {s.student.name} — it
+                          is not posted to the course discussion forum.
                         </p>
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {s.weeklyAverage !== null ? `${s.weeklyAverage} / 5` : "No data"}
-                        </p>
+
+                        {threadLoading ? (
+                          <div className="flex justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                          </div>
+                        ) : thread.length > 0 ? (
+                          <div className="space-y-2 mb-3 max-h-64 overflow-y-auto pr-1">
+                            {thread.map((m) => {
+                              const isMine = (m.sender?._id || m.sender) === authUser?._id;
+                              return (
+                                <div
+                                  key={m._id}
+                                  className={`flex ${isMine ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                    className={`max-w-xs px-3 py-1.5 rounded-2xl text-sm ${
+                                      isMine
+                                        ? "bg-purple-600 text-white rounded-br-sm"
+                                        : "bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-sm"
+                                    }`}
+                                  >
+                                    {m.message}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        <Textarea
+                          value={messageDraft}
+                          onChange={(e) => setMessageDraft(e.target.value)}
+                          placeholder={
+                            s.needsAttention
+                              ? `Hi ${s.student.name.split(" ")[0]}, I noticed you might be having a tough time lately — is everything okay? I'm here if you want to talk.`
+                              : `Write a private message to ${s.student.name}...`
+                          }
+                          rows={3}
+                          className="mb-3"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleComposer(s.student._id)}
+                            disabled={sending}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSendMessage(s.student._id)}
+                            disabled={sending}
+                          >
+                            <Send className="w-4 h-4 mr-1" />
+                            {sending ? "Sending..." : "Send Privately"}
+                          </Button>
+                        </div>
                       </div>
-                      {s.latestMood && (
-                        <Badge className={MOOD_COLOR[s.latestMood]}>
-                          {s.latestMood.replace("_", " ")}
-                        </Badge>
-                      )}
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

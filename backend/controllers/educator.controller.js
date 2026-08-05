@@ -233,6 +233,22 @@ export const getMyCourses = asyncHandler(async (req, res) => {
   res.json(courses);
 });
 
+// @desc    Get a single course, but only if it belongs to the requesting
+//          educator — unlike the public getCourseById, this never leaks
+//          another educator's course data (e.g. into the edit-course form).
+// @route   GET /api/educator/courses/:courseId
+export const getMyCourseById = asyncHandler(async (req, res) => {
+  const course = await Course.findOne({
+    _id: req.params.courseId,
+    educator: req.user._id,
+  });
+  if (!course) {
+    res.status(404);
+    throw new Error("Course not found.");
+  }
+  res.json(course);
+});
+
 // @desc    Request approval
 // @route   POST /api/educators/request-approval
 export const requestApproval = asyncHandler(async (req, res) => {

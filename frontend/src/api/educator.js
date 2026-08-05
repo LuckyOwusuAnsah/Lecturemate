@@ -30,6 +30,13 @@ export const getMyCourses = async () => {
   return res.data;
 };
 
+// Scoped to courses owned by the logged-in educator — safe to use for the
+// edit-course form, unlike the public getCourseById.
+export const getMyCourseById = async (courseId) => {
+  const res = await API.get(`/educator/courses/${courseId}`);
+  return res.data;
+};
+
 export const getEducatorAnalytics = async () => {
     const res = await API.get("/educator/analytics");
     return res.data;
@@ -47,5 +54,15 @@ export const getEducatorDashboardStats = async () => {
 
 export const getStudentsWellness = async () => {
   const res = await API.get("/educator/students/wellness");
+  return res.data;
+};
+
+export const sendMessageToStudent = async (studentId, message) => {
+  const res = await API.post(`/educator/students/${studentId}/messages`, { message });
+  return res.data;
+};
+
+export const getConversationWithStudent = async (studentId) => {
+  const res = await API.get(`/educator/students/${studentId}/messages`);
   return res.data;
 };

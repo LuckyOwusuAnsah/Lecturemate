@@ -18,6 +18,7 @@ import {
   Users,
   BarChart3,
   Sparkles,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +38,7 @@ const adminNavigation = [
 const studentNavigation = [
   { name: "Dashboard", href: createPageUrl("StudentDashboard"), icon: User },
   { name: "Wellness", href: createPageUrl("Wellness"), icon: Heart },
+  { name: "Messages", href: createPageUrl("Messages"), icon: MessageCircle },
 ];
 
 // Links specific to educators

@@ -25,7 +25,7 @@ import { toast } from 'react-toastify';
 // Custom Hooks and Context
 import { useCreateCourse } from '@/hooks/useCreateCourse'; // Updated hook
 import { useAuth } from '@/context/AuthContext';
-import { getCourseById } from '@/api/courses'; // Import API to fetch single course for edit mode
+import { getMyCourseById } from '@/api/educator'; // Fetch single course for edit mode, scoped to the logged-in educator
 
 export default function CreateCourse() {
     const navigate = useNavigate();
@@ -64,7 +64,7 @@ export default function CreateCourse() {
                 // Case: Edit Mode - Fetch existing course data
                 setIsLoadingCourseData(true);
                 try {
-                    const courseToEdit = await getCourseById(editingCourseId);
+                    const courseToEdit = await getMyCourseById(editingCourseId);
                     if (courseToEdit) {
                         setCourseData({
                             title: courseToEdit.title || "",

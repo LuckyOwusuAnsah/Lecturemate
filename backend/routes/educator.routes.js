@@ -12,12 +12,17 @@ import {
   getEducatorAnalytics,
   getEducatorDashboardStats,
   getStudentsWellness,
+  getMyCourseById,
 } from "../controllers/educator.controller.js";
 import {
   createQuiz,
   getAttemptsForQuiz,
   gradeShortAnswers,
 } from "../controllers/quizController.js";
+import {
+  sendMessageToStudent,
+  getConversationWithStudent,
+} from "../controllers/privateMessageController.js";
 import { protect, authorizeRoles, requireApprovedEducator } from "../middleware/authMiddleware.js";
 const educatorRouter = express.Router();
 import upload from "../middleware/uploadMiddleware.js";
@@ -41,6 +46,9 @@ educatorRouter.get("/tools", getTeachingTools);
 educatorRouter.post("/request-approval", requestApproval);
 
 educatorRouter.get("/my-courses", getMyCourses);
+// Scoped single-course lookup — only ever returns a course owned by the
+// requesting educator, unlike the public /api/courses/:id endpoint.
+educatorRouter.get("/courses/:courseId", getMyCourseById);
 
 // --- Everything below requires an admin-approved educator account ---
 
@@ -58,5 +66,9 @@ educatorRouter.get('/analytics', requireApprovedEducator, getEducatorAnalytics);
 
 // Student wellness overview (mood trends for students enrolled in this educator's courses)
 educatorRouter.get('/students/wellness', requireApprovedEducator, getStudentsWellness);
+
+// Private messages to a specific student (e.g. checking in on a flagged student)
+educatorRouter.post('/students/:studentId/messages', requireApprovedEducator, sendMessageToStudent);
+educatorRouter.get('/students/:studentId/messages', requireApprovedEducator, getConversationWithStudent);
 
 export default educatorRouter;

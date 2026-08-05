@@ -56,3 +56,18 @@ export const removeFromWishlist = async (courseId) => {
   const res = await API.delete(`/student/wishlist/${courseId}`);
   return res.data;
 };
+
+export const getMyConversations = async () => {
+  const res = await API.get("/student/messages");
+  return res.data;
+};
+
+export const getConversationWithEducator = async (educatorId) => {
+  const res = await API.get(`/student/messages/${educatorId}`);
+  return res.data;
+};
+
+export const replyToEducator = async (educatorId, message) => {
+  const res = await API.post(`/student/messages/${educatorId}`, { message });
+  return res.data;
+};
