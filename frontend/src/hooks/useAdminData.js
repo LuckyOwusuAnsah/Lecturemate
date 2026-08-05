@@ -12,13 +12,17 @@ import {
     toggleCourseStatus as toggleCourseStatusAPI,
     getAdminDashboardStats as getAdminDashboardStatsAPI,
     deleteUser as deleteUserAPI,
-    deleteCourse as deleteCourseAPI
+    deleteCourse as deleteCourseAPI,
+    getPendingEducators as getPendingEducatorsAPI,
+    approveEducator as approveEducatorAPI,
+    rejectEducator as rejectEducatorAPI
 } from '../api/admin';
 
 export const useAdminData = () => {
     const { user: authUser, loading: authLoading, isAuthenticated } = useAuth();
     const [users, setUsers] = useState([]);
     const [courses, setCourses] = useState([]);
+    const [pendingEducators, setPendingEducators] = useState([]);
     const [stats, setStats] = useState({
         totalUsers: 0,
         students: 0,
@@ -41,26 +45,29 @@ export const useAdminData = () => {
         setLoading(true);
         setError(null);
         try {
-            const [usersData, coursesData, statsData] = await Promise.all([
+            const [usersData, coursesData, statsData, pendingEducatorsData] = await Promise.all([
                 getAllUsersAdmin(),
                 getAllCoursesAdmin(),
-                getAdminDashboardStatsAPI()
+                getAdminDashboardStatsAPI(),
+                getPendingEducatorsAPI()
             ]);
 
             setUsers(usersData);
             setCourses(coursesData);
+            setPendingEducators(pendingEducatorsData);
             setStats({
                 ...statsData,
                 // --- FIX 1: Filter by explicit string 'published' ---
                 publishedCourses: coursesData.filter(c => c.status === 'Published').length,
             });
-            
+
         } catch (err) {
             console.error("Failed to fetch admin data:", err);
             setError(err.response?.data?.message || "Failed to load admin panel data.");
             toast.error(err.response?.data?.message || "Failed to load admin panel data.");
             setUsers([]);
             setCourses([]);
+            setPendingEducators([]);
             setStats({ totalUsers: 0, students: 0, educators: 0, pendingEducators: 0, totalCourses: 0, publishedCourses: 0 });
         } finally {
             setLoading(false);
@@ -119,6 +126,35 @@ export const useAdminData = () => {
         }
     }, []);
 
+    const approveEducatorApplication = useCallback(async (educatorId) => {
+        try {
+            const response = await approveEducatorAPI(educatorId);
+            toast.success(response.message || "Educator approved.");
+            setPendingEducators(prev => prev.filter(item => item.user._id !== educatorId));
+            setUsers(prev => prev.map(u => u._id === educatorId ? { ...u, status: 'approved' } : u));
+            setStats(prev => ({ ...prev, pendingEducators: Math.max(0, prev.pendingEducators - 1) }));
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to approve educator.");
+            console.error("Error approving educator:", err);
+        }
+    }, []);
+
+    const rejectEducatorApplication = useCallback(async (educatorId) => {
+        if (!window.confirm("Reject this educator application? They will not be able to publish courses.")) {
+            return;
+        }
+        try {
+            const response = await rejectEducatorAPI(educatorId);
+            toast.success(response.message || "Educator rejected.");
+            setPendingEducators(prev => prev.filter(item => item.user._id !== educatorId));
+            setUsers(prev => prev.map(u => u._id === educatorId ? { ...u, status: 'rejected' } : u));
+            setStats(prev => ({ ...prev, pendingEducators: Math.max(0, prev.pendingEducators - 1) }));
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Failed to reject educator.");
+            console.error("Error rejecting educator:", err);
+        }
+    }, []);
+
     const deleteUser = useCallback(async (userId) => {
         if (window.confirm("Are you sure you want to delete this user permanently? This action cannot be undone.")) {
             try {
@@ -160,6 +196,7 @@ export const useAdminData = () => {
     return {
         users,
         courses,
+        pendingEducators,
         stats,
         loading,
         error,
@@ -168,6 +205,8 @@ export const useAdminData = () => {
         toggleUserRole,
         toggleCourseStatus,
         deleteUser,
-        deleteCourse
+        deleteCourse,
+        approveEducatorApplication,
+        rejectEducatorApplication
     };
 };

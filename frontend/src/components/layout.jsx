@@ -44,6 +44,7 @@ const educatorNavigation = [
   { name: "Dashboard", href: createPageUrl("EducatorDashboard"), icon: GraduationCap },
   { name: "Create Course", href: createPageUrl("CreateCourse"), icon: BookOpen },
   { name: "Analytics", href: createPageUrl("Analytics"), icon: BarChart3 },
+  { name: "Student Wellness", href: createPageUrl("StudentWellness"), icon: Heart },
   { name: "AI Content", href: createPageUrl("AIContentGenerator"), icon: Sparkles },
 ];
 

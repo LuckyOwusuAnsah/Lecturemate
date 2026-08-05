@@ -8,21 +8,35 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchCurrentUser = async () => {
+    try {
+      setLoading(true);
+      const res = await API.get("/auth/me");
+      setUser(res.data);
+    } catch (err) {
+      setUser(null);
+      localStorage.removeItem('token'); // Clear token if check fails
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        setLoading(true);
-        const res = await API.get("/auth/me");
-        setUser(res.data);
-      } catch (err) {
-        setUser(null);
-        localStorage.removeItem('token'); // Clear token if check fails
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCurrentUser();
   }, []);
+
+  // Re-fetches the current user without the initial full-page loading state —
+  // used by screens that need to check whether something changed server-side
+  // (e.g. an educator checking whether admin has approved their account yet).
+  const refreshUser = async () => {
+    try {
+      const res = await API.get("/auth/me");
+      setUser(res.data);
+      return { success: true, user: res.data };
+    } catch {
+      return { success: false };
+    }
+  };
 
   const login = async (credentials) => {
     try {
@@ -87,6 +101,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUserOnboardingStatus,
+    refreshUser,
     loading,
     error,
     isAuthenticated: !!user,

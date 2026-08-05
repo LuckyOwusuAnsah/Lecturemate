@@ -31,6 +31,32 @@ const getYouTubeVideoId = (url) => {
     return videoId;
 };
 
+/**
+ * Extracts a Google Drive file ID from common share/view link formats,
+ * e.g. drive.google.com/file/d/FILE_ID/view or drive.google.com/open?id=FILE_ID
+ */
+const getGoogleDriveFileId = (url) => {
+    if (!url) return null;
+    const match = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?id=)([a-zA-Z0-9_-]+)/i);
+    return match ? match[1] : null;
+};
+
+/**
+ * Rewrites a Dropbox share link (…?dl=0) into a direct-content link (…?raw=1)
+ * that a <video> tag can play, instead of Dropbox's HTML preview page.
+ */
+const getDropboxDirectUrl = (url) => {
+    if (!url || !/dropbox\.com/i.test(url)) return url;
+    try {
+        const parsed = new URL(url);
+        parsed.searchParams.delete('dl');
+        parsed.searchParams.set('raw', '1');
+        return parsed.toString();
+    } catch {
+        return url;
+    }
+};
+
 export default function VideoPlayer({
     video,
     allLectures: incomingAllLectures, // Renamed to avoid direct mutation
@@ -56,6 +82,20 @@ export default function VideoPlayer({
     const isYouTubeVideo = video?.video_url ? getYouTubeVideoId(video.video_url) : null;
     const youtubeEmbedUrl = isYouTubeVideo ? `https://www.youtube.com/embed/${isYouTubeVideo}?autoplay=1&rel=0&modestbranding=1&controls=1` : null;
 
+    const googleDriveFileId = !isYouTubeVideo && video?.video_url ? getGoogleDriveFileId(video.video_url) : null;
+    const isGoogleDriveVideo = !!googleDriveFileId;
+    const googleDriveEmbedUrl = isGoogleDriveVideo ? `https://drive.google.com/file/d/${googleDriveFileId}/preview` : null;
+
+    // YouTube and Google Drive both render as an iframe with their own player controls,
+    // so our custom play/pause/seek/volume UI only applies when neither is in play.
+    const isEmbeddedPlayer = !!(isYouTubeVideo || isGoogleDriveVideo);
+
+    // Dropbox share links (…?dl=0) point at an HTML preview page, not the video itself —
+    // rewrite to a direct link so it plays through our own <video> element.
+    const resolvedVideoUrl = !isEmbeddedPlayer && video?.video_url
+        ? getDropboxDirectUrl(video.video_url)
+        : video?.video_url;
+
     // Determine current lecture's index for navigation
     // Use optional chaining for video._id in case video is null/undefined
     const currentLectureIndex = allLectures.findIndex(lec => lec?._id === video?._id);
@@ -64,7 +104,7 @@ export default function VideoPlayer({
 
     useEffect(() => {
         const videoElement = videoRef.current;
-        if (!isYouTubeVideo && videoElement) {
+        if (!isEmbeddedPlayer && videoElement) {
             const handleTimeUpdate = () => {
                 setCurrentTime(videoElement.currentTime);
                 setProgress((videoElement.currentTime / videoElement.duration) * 100);
@@ -100,7 +140,7 @@ export default function VideoPlayer({
                 videoElement.removeEventListener('pause', handlePause);
                 videoElement.removeEventListener('ended', handleEnded);
             };
-        } else if (isYouTubeVideo) { // No videoRef.current check needed here, it's an iframe
+        } else if (isEmbeddedPlayer) { // No videoRef.current check needed here, it's an iframe
             setIsPlaying(true);
             setDuration(0);
             setCurrentTime(0);
@@ -114,7 +154,7 @@ export default function VideoPlayer({
             setProgress(0);
         };
 
-    }, [video, isCompleted, onComplete, isYouTubeVideo, volume, isMuted]);
+    }, [video, isCompleted, onComplete, isEmbeddedPlayer, volume, isMuted]);
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -151,7 +191,7 @@ export default function VideoPlayer({
     }, [onClose]);
 
     const togglePlayPause = () => {
-        if (videoRef.current && !isYouTubeVideo) {
+        if (videoRef.current && !isEmbeddedPlayer) {
             if (isPlaying) {
                 videoRef.current.pause();
             } else {
@@ -162,14 +202,14 @@ export default function VideoPlayer({
     };
 
     const toggleMute = () => {
-        if (videoRef.current && !isYouTubeVideo) {
+        if (videoRef.current && !isEmbeddedPlayer) {
             videoRef.current.muted = !isMuted;
             setIsMuted(!isMuted);
         }
     };
 
     const handleVolumeChange = (e) => {
-        if (videoRef.current && !isYouTubeVideo) {
+        if (videoRef.current && !isEmbeddedPlayer) {
             const newVolume = parseFloat(e.target.value);
             setVolume(newVolume);
             videoRef.current.volume = newVolume;
@@ -177,7 +217,7 @@ export default function VideoPlayer({
     };
 
     const handleSeek = (e) => {
-        if (videoRef.current && !isYouTubeVideo && duration > 0) {
+        if (videoRef.current && !isEmbeddedPlayer && duration > 0) {
             const rect = e.currentTarget.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const width = rect.width;
@@ -270,17 +310,27 @@ export default function VideoPlayer({
                                 allowFullScreen
                                 loading="lazy"
                             ></iframe>
+                        ) : isGoogleDriveVideo ? (
+                            <iframe
+                                className="absolute top-0 left-0 w-full h-full"
+                                src={googleDriveEmbedUrl}
+                                title={video.title || "Lecture Video"}
+                                frameBorder="0"
+                                allow="autoplay"
+                                allowFullScreen
+                                loading="lazy"
+                            ></iframe>
                         ) : (
                             <video
                                 ref={videoRef}
-                                src={video.video_url}
+                                src={resolvedVideoUrl}
                                 className="absolute top-0 left-0 w-full h-full bg-black"
                             />
                         )}
                     </div>
 
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-100 p-4">
-                        {!isYouTubeVideo && (
+                        {!isEmbeddedPlayer && (
                             <div
                                 className="w-full h-2 bg-gray-600 rounded-full cursor-pointer mb-2"
                                 onClick={handleSeek}
@@ -291,15 +341,15 @@ export default function VideoPlayer({
                                 />
                             </div>
                         )}
-                        {isYouTubeVideo && (
+                        {isEmbeddedPlayer && (
                              <div className="mb-2 text-center text-sm text-gray-400">
-                                 Video streamed from YouTube. Progress not directly tracked.
+                                 Video streamed from {isYouTubeVideo ? "YouTube" : "Google Drive"}. Progress not directly tracked.
                              </div>
                         )}
 
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                {!isYouTubeVideo && (
+                                {!isEmbeddedPlayer && (
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -314,7 +364,7 @@ export default function VideoPlayer({
                                     </Button>
                                 )}
 
-                                {!isYouTubeVideo && (
+                                {!isEmbeddedPlayer && (
                                     <div className="flex items-center gap-2">
                                         <Button
                                             variant="ghost"
@@ -340,7 +390,7 @@ export default function VideoPlayer({
                                     </div>
                                 )}
 
-                                {!isYouTubeVideo && (
+                                {!isEmbeddedPlayer && (
                                     <div className="flex items-center gap-1 text-sm text-gray-300">
                                         <Clock className="w-4 h-4" />
                                         {formatTime(currentTime)} / {formatTime(duration)}

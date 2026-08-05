@@ -80,7 +80,7 @@ export default function EducatorOnboarding() {
     if (user && user.role === 'educator') {
       if (isOnboardingComplete) {
         toast.info("Onboarding already completed.");
-        navigate("/EducatorDashboard");
+        navigate(user.status === "approved" ? "/EducatorDashboard" : "/PendingApproval");
         return;
       }
     } else if (user && user.role !== 'educator') {
@@ -155,9 +155,6 @@ export default function EducatorOnboarding() {
     try {
       const payload = new FormData();
       for (const key in formData) {
-        if (key === "agreeTerms") {
-          continue;
-        }
         let actualKey = key;
         let actualValue = formData[key];
 
@@ -187,8 +184,8 @@ export default function EducatorOnboarding() {
         throw new Error(updateResult.message || "Failed to update general onboarding status.");
       }
 
-      toast.success("Application submitted successfully! Onboarding complete.");
-      navigate("/EducatorDashboard");
+      toast.success("Application submitted! Your account is now pending admin approval.");
+      navigate("/PendingApproval");
     } catch (err) {
       console.error("Educator onboarding submission error:", err);
       toast.error(
@@ -434,7 +431,12 @@ export default function EducatorOnboarding() {
                 />
                 <label htmlFor="agreeTerms" className="text-sm cursor-pointer">
                   I agree to the{" "}
-                  <a href="/terms" className="text-indigo-600 hover:underline">
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-600 hover:underline"
+                  >
                     terms and conditions
                   </a>
                 </label>

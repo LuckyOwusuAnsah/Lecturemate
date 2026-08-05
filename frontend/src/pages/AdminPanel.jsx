@@ -18,6 +18,8 @@ import {
   AlertCircle, // Added for error display
   Trash2, // Added for delete buttons
   GraduationCap, // Icon for students/educators
+  Clock,
+  ExternalLink,
 } from "lucide-react";
 
 // Shadcn UI components for dropdowns
@@ -32,6 +34,7 @@ export default function AdminPanel() {
   const {
     users,
     courses,
+    pendingEducators,
     stats,
     loading, // Represents the loading state from the hook
     error,   // Represents any error from the hook
@@ -40,7 +43,9 @@ export default function AdminPanel() {
     toggleUserRole,
     toggleCourseStatus,
     deleteUser, // Destructure deleteUser function
-    deleteCourse // Destructure deleteCourse function
+    deleteCourse, // Destructure deleteCourse function
+    approveEducatorApplication,
+    rejectEducatorApplication
   } = useAdminData();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -166,6 +171,8 @@ export default function AdminPanel() {
                 </div>
                 {stats.pendingEducators > 0 && (
                   <div className="flex items-center gap-2 mt-2 text-yellow-100 text-sm">
+                    <Clock className="w-4 h-4" />
+                    {stats.pendingEducators} awaiting approval
                   </div>
                 )}
               </div>
@@ -199,6 +206,91 @@ export default function AdminPanel() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Pending Educator Applications */}
+        {pendingEducators.length > 0 && (
+          <Card className="border-0 shadow-lg mb-8 border-l-4 border-l-amber-500">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                Pending Educator Applications ({pendingEducators.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {pendingEducators.map(({ user, profile }) => (
+                  <div
+                    key={user._id}
+                    className="p-4 border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10 rounded-lg"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {user.name}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          {user.email}
+                        </p>
+
+                        {profile ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
+                            <p><span className="font-medium">Expertise:</span> {profile.expertise}</p>
+                            <p><span className="font-medium">Institution:</span> {profile.institution}</p>
+                            <p><span className="font-medium">Experience:</span> {profile.experience} years</p>
+                            <p><span className="font-medium">Subjects:</span> {profile.subjects || "—"}</p>
+                            <p className="sm:col-span-2">
+                              <span className="font-medium">Motivation:</span> {profile.motivation || "—"}
+                            </p>
+                            {profile.credentialsFile && (
+                              <p className="sm:col-span-2 flex items-center gap-1">
+                                <span className="font-medium">Credentials:</span>{" "}
+                                <a
+                                  href={profile.credentialsFile}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-indigo-600 hover:underline inline-flex items-center gap-1"
+                                >
+                                  View <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </p>
+                            )}
+                            <p className="sm:col-span-2 text-xs text-gray-500 dark:text-gray-400">
+                              Agreed to terms:{" "}
+                              {profile.agreedToTerms
+                                ? `Yes, on ${new Date(profile.agreedToTermsAt).toLocaleDateString()}`
+                                : "No"}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">
+                            Onboarding profile not yet submitted.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex sm:flex-col gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={() => approveEducatorApplication(user._id)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-1" /> Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => rejectEducatorApplication(user._id)}
+                        >
+                          <XCircle className="w-4 h-4 mr-1" /> Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Navigation Tabs */}
         <div className="flex gap-4 mb-6">

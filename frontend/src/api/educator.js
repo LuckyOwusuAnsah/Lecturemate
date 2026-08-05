@@ -44,3 +44,8 @@ export const getEducatorDashboardStats = async () => {
     throw error;
   }
 };
+
+export const getStudentsWellness = async () => {
+  const res = await API.get("/educator/students/wellness");
+  return res.data;
+};

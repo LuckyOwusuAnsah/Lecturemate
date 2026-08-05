@@ -23,13 +23,35 @@ export const getAdminDashboardStats = async () => {
   }
 };
 
-// Updates an educator's status (e.g., approve)
-export const updateEducatorStatus = async (educatorId, status) => {
+// Fetches pending educator applications along with their onboarding profile data
+export const getPendingEducators = async () => {
   try {
-    const res = await API.put(`/admin/educators/${educatorId}/status`, { status });
+    const res = await API.get("/admin/educators/pending");
     return res.data;
   } catch (error) {
-    console.error(`API Error: Failed to update educator ${educatorId} status to ${status}`, error);
+    console.error("API Error: Failed to fetch pending educators", error);
+    throw error;
+  }
+};
+
+// Approves a pending educator application
+export const approveEducator = async (educatorId) => {
+  try {
+    const res = await API.post(`/admin/approve-educator/${educatorId}`);
+    return res.data;
+  } catch (error) {
+    console.error(`API Error: Failed to approve educator ${educatorId}`, error);
+    throw error;
+  }
+};
+
+// Rejects a pending educator application
+export const rejectEducator = async (educatorId) => {
+  try {
+    const res = await API.post(`/admin/reject-educator/${educatorId}`);
+    return res.data;
+  } catch (error) {
+    console.error(`API Error: Failed to reject educator ${educatorId}`, error);
     throw error;
   }
 };

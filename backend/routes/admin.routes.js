@@ -5,6 +5,7 @@ import {
   getDashboardStats,
   approveEducator,
   rejectEducator,
+  getPendingEducators,
   getAllUsers,
   getUserById,
   deleteUser,
@@ -28,6 +29,7 @@ adminRouter.put("/profile", updateAdminProfile);
 adminRouter.get("/dashboard-stats", getDashboardStats);
 
 // Educator approval
+adminRouter.get("/educators/pending", getPendingEducators);
 adminRouter.post("/approve-educator/:id", approveEducator);
 adminRouter.post("/reject-educator/:id", rejectEducator);
 

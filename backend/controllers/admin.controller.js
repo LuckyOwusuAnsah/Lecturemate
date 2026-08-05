@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import User from "../models/UserModel.js";
 import Course from "../models/CourseModel.js";
+import EducatorProfile from "../models/EducatorProfileModel.js";
 
 // GET /api/admin/profile
 export const getAdminProfile = asyncHandler(async (req, res) => {
@@ -57,6 +58,31 @@ export const rejectEducator = asyncHandler(async (req, res) => {
   educator.status = "rejected";
   await educator.save();
   res.json({ message: "Educator rejected" });
+});
+
+// GET /api/admin/educators/pending
+// Returns pending educator accounts together with the application data they
+// submitted during onboarding, so an admin has something real to verify
+// before approving or rejecting.
+export const getPendingEducators = asyncHandler(async (req, res) => {
+  const pendingEducators = await User.find({
+    role: "educator",
+    status: "pending",
+  })
+    .select("-password")
+    .sort({ createdAt: 1 });
+
+  const profiles = await EducatorProfile.find({
+    user: { $in: pendingEducators.map((u) => u._id) },
+  });
+  const profileByUserId = new Map(profiles.map((p) => [p.user.toString(), p]));
+
+  const result = pendingEducators.map((user) => ({
+    user,
+    profile: profileByUserId.get(user._id.toString()) || null,
+  }));
+
+  res.status(200).json(result);
 });
 
 // GET /api/admin/users

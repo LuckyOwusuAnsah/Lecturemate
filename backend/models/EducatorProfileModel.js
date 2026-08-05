@@ -67,6 +67,13 @@ const educatorProfileSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    agreedToTerms: {
+      type: Boolean,
+      default: false,
+    },
+    agreedToTermsAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
 );

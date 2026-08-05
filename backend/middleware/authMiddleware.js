@@ -39,21 +39,37 @@ const adminOnly = asyncHandler(async (req, res, next) => {
 
 const authorizeRoles = (allowedRoles) => asyncHandler(async (req, res, next) => {
   if (!req.user) {
-    res.status(401); 
+    res.status(401);
     throw new Error("Not authorized, user information missing.");
   }
 
   // Check if the authenticated user's role is included in the allowedRoles array
   if (allowedRoles.includes(req.user.role)) {
-    next(); 
+    next();
   } else {
     res.status(403); // Forbidden
     throw new Error(`Access Denied - Role (${req.user.role}) is not authorized to access this resource.`);
   }
 });
 
+// Blocks an educator from real educator actions (creating/publishing courses,
+// grading, analytics, student wellness) until an admin has approved their
+// account. Must run after authorizeRoles(['educator']).
+const requireApprovedEducator = asyncHandler(async (req, res, next) => {
+  if (req.user?.status !== "approved") {
+    res.status(403);
+    throw new Error(
+      req.user?.status === "rejected"
+        ? "Your educator application was not approved. Please contact support."
+        : "Your educator account is still pending admin approval."
+    );
+  }
+  next();
+});
+
 export {
   protect,
   adminOnly,
-  authorizeRoles, 
+  authorizeRoles,
+  requireApprovedEducator,
 };

@@ -15,6 +15,7 @@ import CreateCourse from "./pages/Educator/CreateCourse";
 import AdminPanel from "./pages/AdminPanel";
 import CourseDetail from "./pages/Student/CourseDetail";
 import EducatorOnboarding from "./pages/Educator/EducatorOnboarding.jsx";
+import PendingApproval from "./pages/Educator/PendingApproval.jsx";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import SetPassword from "./pages/SetPassword";
@@ -23,15 +24,17 @@ import { useAuth } from "./context/AuthContext.jsx";
 // import useUser from "./hooks/useUser"; // No longer directly needed in App.jsx for initial fetch
 
 import Analytics from "./pages/Educator/Analytics";
+import StudentWellness from "./pages/Educator/StudentWellness";
 import QuizGrading from "./pages/Educator/QuizGrading";
 import CoursesPage from "./pages/CoursesPage";
 import Wellness from "./pages/Student/Wellness";
 import Wishlist from "./pages/Student/Wishlist";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
+import Terms from "./pages/Terms.jsx";
 import CounselorChat from "./components/CounselorChat.jsx";
 
 // A simple PrivateRoute component to handle redirection logic
-const PrivateRoute = ({ children, allowedRoles = [], requiresOnboarding = false }) => {
+const PrivateRoute = ({ children, allowedRoles = [], requiresOnboarding = false, requireApproval = false }) => {
  const { user, isAuthenticated, isOnboardingComplete, loading: authLoading } = useAuth();
  const navigate = useNavigate();
  const location = useLocation(); // Get current location
@@ -71,12 +74,20 @@ const PrivateRoute = ({ children, allowedRoles = [], requiresOnboarding = false 
    return;
   }
 
+  // 4. Check educator approval status (for routes that require it)
+  if (requireApproval && user?.role === "educator" && user?.status !== "approved") {
+   navigate("/PendingApproval", { replace: true });
+   return;
+  }
+
   // If all checks pass, render the children
- }, [isAuthenticated, isOnboardingComplete, user, authLoading, allowedRoles, requiresOnboarding, navigate, location]);
+ }, [isAuthenticated, isOnboardingComplete, user, authLoading, allowedRoles, requiresOnboarding, requireApproval, navigate, location]);
+
+  const isPendingEducator = requireApproval && user?.role === "educator" && user?.status !== "approved";
 
   // Unified loading state for PrivateRoute
   // We should not render children until auth status is confirmed and roles/onboarding are checked
-  if (authLoading || (!isAuthenticated && !authLoading) || (requiresOnboarding && !isOnboardingComplete && !authLoading) || (allowedRoles.length > 0 && !authLoading && user && !allowedRoles.includes(user.role))) {
+  if (authLoading || (!isAuthenticated && !authLoading) || (requiresOnboarding && !isOnboardingComplete && !authLoading) || (allowedRoles.length > 0 && !authLoading && user && !allowedRoles.includes(user.role)) || (!authLoading && isPendingEducator)) {
     // Only show loading message if auth is *actually* loading.
     // Otherwise, the navigation in useEffect will handle the redirect.
   return (
@@ -126,6 +137,7 @@ function App() {
     <Route path='/forgot-password' element={<ForgotPassword />} />
     <Route path='/set-password/:resetToken' element={<SetPassword />} />
     <Route path='/Courses' element={<CoursesPage />} />
+    <Route path='/terms' element={<Terms />} />
         <Route path='/ai' element={<CounselorChat />} />
 
 
@@ -138,6 +150,11 @@ function App() {
     <Route path="/EducatorOnboarding" element={
      <PrivateRoute allowedRoles={['educator']} requiresOnboarding={false}>
       <EducatorOnboarding />
+     </PrivateRoute>
+    } />
+    <Route path="/PendingApproval" element={
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+      <PendingApproval />
      </PrivateRoute>
     } />
 
@@ -158,27 +175,32 @@ function App() {
      </PrivateRoute>
     } />
     <Route path='/AIContentGenerator' element={
-     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true} requireApproval={true}>
       <AIContentGenerator />
      </PrivateRoute>
     } />
     <Route path='/Analytics' element={
-     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true} requireApproval={true}>
       <Analytics />
      </PrivateRoute>
     } />
+    <Route path='/StudentWellness' element={
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true} requireApproval={true}>
+      <StudentWellness />
+     </PrivateRoute>
+    } />
     <Route path='/EducatorDashboard' element={
-     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true} requireApproval={true}>
       <EducatorDashboard />
      </PrivateRoute>
     } />
     <Route path='/QuizGrading' element={
-     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true} requireApproval={true}>
       <QuizGrading />
      </PrivateRoute>
     } />
     <Route path='/CreateCourse' element={
-     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true}>
+     <PrivateRoute allowedRoles={['educator']} requiresOnboarding={true} requireApproval={true}>
       <CreateCourse />
      </PrivateRoute>
     } />

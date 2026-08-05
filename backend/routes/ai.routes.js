@@ -1,5 +1,5 @@
 import express from 'express';
-import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
+import { protect, authorizeRoles, requireApprovedEducator } from '../middleware/authMiddleware.js';
 import { buildQuizAssessment, createCourseThumbnailImage, generateCourseOutline, getAICounselorResponse, getWellnessInsights, writeCourseDescription } from '../controllers/aiController.js';
 
 const aiRouter = express.Router();
@@ -12,7 +12,8 @@ aiRouter.post('/counselor', protect, authorizeRoles(['student']), getAICounselor
 
 // Authorize only 'educator' role
 aiRouter.use(protect);
-aiRouter.use(authorizeRoles(['educator'])); 
+aiRouter.use(authorizeRoles(['educator']));
+aiRouter.use(requireApprovedEducator);
 
 aiRouter.post('/generate-course-outline', generateCourseOutline);
 
