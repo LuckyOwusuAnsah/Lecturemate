@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lightbulb, Loader2 } from "lucide-react"; // Added Loader2, removed RefreshCw and Button
+import { Button } from "@/components/ui/button";
+import { Lightbulb, Loader2, RefreshCw } from "lucide-react";
 
 // Import the necessary hooks
 import { useAuth } from '@/context/AuthContext';
@@ -10,19 +11,18 @@ export default function WellnessTips() {
   const { user, loading: authLoading } = useAuth(); // Get user for fetching insights
   const [triggerInsightsFetch, setTriggerInsightsFetch] = useState(false);
 
-  // Define moodDataForInsights locally for this component
-  const moodDataForInsights = {
-    userId: user?._id,
-    // Note: We're not passing moodEntries.length directly from Wellness.jsx to here,
-    // so this insight might not re-fetch immediately if mood entries change *only* in the parent.
-    // For simplicity given the instruction, this component will fetch its own insight on mount/user change.
-  };
+  // Memoized so this object keeps the same reference across re-renders unless
+  // the user actually changes — otherwise fetchInsight (below) gets a new
+  // identity on every render, which re-fires its effect and re-fetches in an
+  // infinite loop, hammering the AI endpoint until it gets rate-limited.
+  const moodDataForInsights = useMemo(() => ({ userId: user?._id }), [user?._id]);
 
   // Use the useWellnessInsights hook directly in WellnessTips
   const {
     insight,
     isLoading: isInsightLoading,
-    error: insightError
+    error: insightError,
+    refetchInsights
   } = useWellnessInsights(moodDataForInsights, triggerInsightsFetch);
 
   // Effect to trigger insights fetch once user is available and not loading
@@ -60,8 +60,12 @@ export default function WellnessTips() {
             AI Wellness Insight
           </CardTitle>
         </CardHeader>
-        <CardContent className="py-8 text-center text-red-500">
-          Error loading insight: {insightError}
+        <CardContent className="py-8 text-center">
+          <p className="text-red-500 mb-3">{insightError}</p>
+          <Button variant="outline" size="sm" onClick={refetchInsights}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
         </CardContent>
       </Card>
     );
