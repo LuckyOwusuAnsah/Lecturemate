@@ -1,75 +1,89 @@
 // backend/services/aiService.js
-import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
-import { AzureKeyCredential } from "@azure/core-auth";
+//
+// Text generation runs on Gemini (same provider/key as the image generator
+// below). This used to call GitHub Models (models.github.ai/inference), but
+// GitHub retired that service, so everything text-related was moved here to
+// avoid depending on two AI providers.
+const API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_TEXT_MODEL = "gemini-3.1-flash-lite";
 
-// --- AI Service Configuration ---
-const GITHUB_AI_TOKEN =process.env.GITHUB_OPENAI_API_KEY;
-const GITHUB_AI_ENDPOINT = "https://models.github.ai/inference";
-const GITHUB_AI_MODEL = "openai/gpt-4.1";
+// Converts an OpenAI-style messages array (role: system/user/assistant) into
+// Gemini's shape: a top-level systemInstruction plus a contents array using
+// role: user/model.
+const toGeminiRequest = (messages, temperature, top_p, responseFormat) => {
+  let systemInstructionText = "";
+  const contents = [];
 
-// Initialize the AI client once
-const aiClient = ModelClient(
-  GITHUB_AI_ENDPOINT,
-  new AzureKeyCredential(GITHUB_AI_TOKEN),
-);
+  for (const msg of messages) {
+    if (msg.role === "system") {
+      systemInstructionText += (systemInstructionText ? "\n\n" : "") + msg.content;
+      continue;
+    }
+    contents.push({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }],
+    });
+  }
+
+  // Gemini requires at least one entry in `contents` — some callers here only
+  // ever send a system-style prompt with no separate user turn.
+  if (contents.length === 0) {
+    contents.push({
+      role: "user",
+      parts: [{ text: "Please respond according to the instructions above." }],
+    });
+  }
+
+  const payload = {
+    contents,
+    generationConfig: {
+      temperature,
+      topP: top_p,
+      ...(responseFormat?.type === "json_object" ? { responseMimeType: "application/json" } : {}),
+    },
+  };
+  if (systemInstructionText) {
+    payload.systemInstruction = { parts: [{ text: systemInstructionText }] };
+  }
+  return payload;
+};
 
 export const getChatCompletion = async (
   messages,
   temperature = 0.7,
   top_p = 1,
-  model = GITHUB_AI_MODEL,
-  // New parameter: responseFormat for requesting structured output
-  responseFormat = undefined // Can be { type: "json_object" }
+  model = GEMINI_TEXT_MODEL,
+  // Can be { type: "json_object" } to request structured JSON output
+  responseFormat = undefined
 ) => {
-  if (!GITHUB_AI_TOKEN) {
-    throw new Error("GITHUB_TOKEN environment variable is not set. Cannot connect to AI service.");
+  if (!API_KEY) {
+    throw new Error("GEMINI_API_KEY environment variable is not set. Cannot connect to AI service.");
   }
 
-  const requestBody = {
-    messages: messages,
-    temperature: temperature,
-    top_p: top_p,
-    model: model,
-  };
+  const payload = toGeminiRequest(messages, temperature, top_p, responseFormat);
+  const apiUrl = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent`;
 
-  // Conditionally add response_format if provided
-  if (responseFormat) {
-    requestBody.response_format = responseFormat;
-  }
-
-  const response = await aiClient.path("/chat/completions").post({
-    body: requestBody,
+  const result = await callApiWithBackoff(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": API_KEY,
+    },
+    body: JSON.stringify(payload),
   });
 
-  if (isUnexpected(response)) {
-    // The error body shape varies (OpenAI-style {error:{message}}, GitHub-style
-    // {message}, or something else entirely on auth/network failures), so log
-    // the raw status + body rather than assuming a shape and crashing here.
-    console.error("GitHub AI API Error Response:", {
-      status: response.status,
-      body: response.body,
-    });
-    const errorMessage =
-      response.body?.error?.message ||
-      response.body?.message ||
-      `AI service responded with status ${response.status}.`;
-    throw new Error(`AI API Error: ${errorMessage}`);
-  }
-
-  // Ensure response structure is as expected before accessing content
-  if (!response.body || !response.body.choices || response.body.choices.length === 0 || !response.body.choices[0].message) {
-    console.error("Unexpected AI API Response Structure:", response.body);
+  const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    console.error("Unexpected Gemini text response structure:", result);
     throw new Error("AI API returned an unexpected response structure.");
   }
 
-  return response.body.choices[0].message.content;
+  return text;
 };
 
 
 
 // SERVICE FOR GENERATING IMAGES
-
-const API_KEY = process.env.GEMINI_API_KEY; 
 
 // Helper function to handle exponential backoff for API calls.
 const callApiWithBackoff = async (url, options, retries = 5, delay = 1000) => {
