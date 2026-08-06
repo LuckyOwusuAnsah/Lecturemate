@@ -51,8 +51,8 @@ export default function SetPassword() {
       <Card className="w-[90%] max-w-md shadow-xl rounded-2xl">
         <CardHeader className="flex flex-col items-center gap-4 pt-8">
           <img
-            src="/logo/owl.png"
-            alt="Logo"
+            src="/logo/owl.svg"
+            alt="LectureMate logo"
             className="w-16 h-16 rounded-full border p-1 bg-white"
           />
           <CardTitle className="text-2xl font-bold text-center">

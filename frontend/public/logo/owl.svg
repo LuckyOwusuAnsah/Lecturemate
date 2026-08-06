@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="lecturemate-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6" />
+      <stop offset="100%" stop-color="#8B5CF6" />
+    </linearGradient>
+  </defs>
+
+  <rect width="200" height="200" rx="44" fill="url(#lecturemate-bg)" />
+
+  <!-- Ear tufts -->
+  <polygon points="58,72 72,26 90,76" fill="#FFFFFF" />
+  <polygon points="142,72 128,26 110,76" fill="#FFFFFF" />
+
+  <!-- Body / head -->
+  <ellipse cx="100" cy="118" rx="58" ry="54" fill="#FFFFFF" />
+
+  <!-- Eyes -->
+  <circle cx="78" cy="112" r="19" fill="#111827" />
+  <circle cx="122" cy="112" r="19" fill="#111827" />
+  <circle cx="72" cy="105" r="5" fill="#FFFFFF" />
+  <circle cx="116" cy="105" r="5" fill="#FFFFFF" />
+
+  <!-- Beak -->
+  <polygon points="100,124 91,140 109,140" fill="#F59E0B" />
+</svg>
